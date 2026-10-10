@@ -16,7 +16,7 @@ done, then brainstorms only what is new.
 
 | # | Slice           | Scope                                                                                                                                               | Depends on | Status      | Spec                                                         |
 |---|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|------------|-------------|--------------------------------------------------------------|
-| 1 | Foundation      | Clean Architecture restructure, API versioning, OpenAPI + Scalar, error contract, Redis removal, 3 backend test tiers, frontend shell, CI split | —          | Spec ready  | [foundation](specs/2026-10-10-foundation-design.md)          |
+| 1 | Foundation      | Clean Architecture restructure, API versioning, OpenAPI + Scalar, error contract, Redis removal, 3 backend test tiers, frontend shell, CI split | —          | Done        | [foundation](specs/2026-10-10-foundation-design.md), [plan](plans/2026-10-10-foundation.md) |
 | 2 | Users           | Full user model (address, active flag, monthly expense quota, soft delete), CRUD API, users management UI                                       | 1          | Not started | —                                                            |
 | 3 | Expense Reports | Report entity, generated title "Prénom Nom - Mois Année", create from user + month (active users only), physical delete, reports list page       | 2          | Not started | —                                                            |
 | 4 | Expenses        | Expense entity and validation, monthly quota rule, edit, soft delete, report page with add form and expenses in pages of 5                     | 3          | Not started | —                                                            |
@@ -33,17 +33,21 @@ These are decided in the Foundation spec; slices follow them unless their own sp
   interfaces declared in Application and implemented in Infrastructure as `AsNoTracking` projections.
 - **Business rules live in Domain entities** and are unit-tested there or through the command
   handlers. Queries hold no logic and are covered by the Acceptance tier.
-- **Errors:** request shape validated by .NET 10 built-in minimal-API validation (DataAnnotations →
-  `400`). `NotFoundException` → `404`; `BusinessRuleViolationException` → `422` with a stable `code`
-  extension (e.g. `expense.quota_exceeded`). The UI maps `code` to its French message.
+- **Errors:** request shape validated by .NET 10 built-in minimal-API validation (DataAnnotations → `400`).
+  Request records must be declared `public`: the validation source generator silently skips other types.
+  `NotFoundException` → `404`; `BusinessRuleViolationException` → `422` with a stable `code` extension
+  (e.g. `expense.quota_exceeded`). Unknown routes and unsupported versions answer a `404` ProblemDetails.
+  The UI maps `code` to its French message.
 - **API:** URL-segment versioning, all endpoints under `/v1/...`; the Angular app calls `/api/v1/...`
   through the dev proxy.
 - **Tests:** xUnit v3 on Microsoft.Testing.Platform, Shouldly, NSubstitute.
   - *Unit* — Domain + command handlers.
   - *Acceptance* — Reqnroll (Gherkin in **English**) + Testcontainers Postgres + `WebApplicationFactory`.
     *Given* arranges data through `AppDbContext`, *When* calls HTTP, *Then* asserts responses.
+    Reuse ApiDriver and HttpSteps ("When I request …", "Then the response is a problem with status …").
   - *End-to-end* — Aspire.Hosting.Testing boots the AppHost, Playwright drives the Angular UI through
-    a few critical journeys per slice.
+    a few critical journeys per slice. Derive page tests from PageTest; the dev seed (Juste Leblanc, Marc Assin) is
+    present.
   - *Frontend* — Vitest specs per page and API service.
 - **Frontend:** feature folders under `src/app/features/<feature>/`, standalone components with
   signals, UI text in French, `fr-FR` locale, Playwright locators by role/text (no `data-testid`).
