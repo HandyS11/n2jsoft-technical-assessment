@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using Application.Paging;
 using Application.Users.Queries;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -16,11 +18,14 @@ internal static class UserEndpoints
         return endpoints;
     }
 
-    private static async Task<Ok<IReadOnlyList<UserSummary>>> ListUsersAsync(
+    private static async Task<Ok<PagedResult<UserSummary>>> ListUsersAsync(
         IUserQueries userQueries,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [Range(1, PageRequest.MaxPage)] int page = 1,
+        [Range(1, PageRequest.MaxPageSize)] int pageSize = PageRequest.DefaultPageSize)
     {
-        var users = await userQueries.ListAsync(cancellationToken).ConfigureAwait(false);
+        var users = await userQueries.ListAsync(new PageRequest(page, pageSize), cancellationToken)
+            .ConfigureAwait(false);
         return TypedResults.Ok(users);
     }
 }

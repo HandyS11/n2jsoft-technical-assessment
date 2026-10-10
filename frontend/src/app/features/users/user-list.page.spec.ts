@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
+import { PagedResult } from '../../core/paged-result';
 import { UserSummary } from './user-summary';
 import UserListPage from './user-list.page';
 import { UsersApi } from './users.api';
 
-function render(users: Observable<UserSummary[]>): HTMLElement {
+function render(users: Observable<PagedResult<UserSummary>>): HTMLElement {
   TestBed.configureTestingModule({
     imports: [UserListPage],
     providers: [{ provide: UsersApi, useValue: { list: () => users } }],
@@ -14,13 +15,19 @@ function render(users: Observable<UserSummary[]>): HTMLElement {
   return fixture.nativeElement as HTMLElement;
 }
 
+function firstPage(items: UserSummary[]): PagedResult<UserSummary> {
+  return { items, page: 1, pageSize: 20, totalCount: items.length };
+}
+
 describe('UserListPage', () => {
   it('renders the name of every user returned by the API', () => {
     const page = render(
-      of([
-        { id: '1', name: 'Juste Leblanc' },
-        { id: '2', name: 'Marc Assin' },
-      ])
+      of(
+        firstPage([
+          { id: '1', name: 'Juste Leblanc' },
+          { id: '2', name: 'Marc Assin' },
+        ])
+      )
     );
 
     const names = Array.from(page.querySelectorAll('li')).map((item) =>
@@ -30,14 +37,14 @@ describe('UserListPage', () => {
   });
 
   it('says so when there is no user', () => {
-    const page = render(of([]));
+    const page = render(of(firstPage([])));
 
     expect(page.querySelector('ul')).toBeNull();
     expect(page.textContent).toContain('Aucun utilisateur.');
   });
 
   it('shows a loading message until the API answers', () => {
-    const page = render(new Observable<UserSummary[]>());
+    const page = render(new Observable<PagedResult<UserSummary>>());
 
     expect(page.textContent).toContain('Chargement…');
   });

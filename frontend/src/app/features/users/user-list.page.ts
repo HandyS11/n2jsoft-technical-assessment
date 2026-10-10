@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, EMPTY } from 'rxjs';
+import { catchError, EMPTY, map } from 'rxjs';
 import { UsersApi } from './users.api';
 
 @Component({
@@ -26,10 +26,12 @@ import { UsersApi } from './users.api';
 })
 export default class UserListPage {
   protected readonly failed = signal(false);
+  // Only the first page for now: the list has no pagination controls yet.
   protected readonly users = toSignal(
     inject(UsersApi)
       .list()
       .pipe(
+        map((page) => page.items),
         catchError(() => {
           this.failed.set(true);
           return EMPTY;
