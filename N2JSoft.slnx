@@ -8,6 +8,7 @@
   </Folder>
   <Folder Name="/backend/tests/">
     <Project Path="backend/tests/AcceptanceTests/AcceptanceTests.csproj" />
+    <Project Path="backend/tests/EndToEndTests/EndToEndTests.csproj" />
     <Project Path="backend/tests/UnitTests/UnitTests.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">

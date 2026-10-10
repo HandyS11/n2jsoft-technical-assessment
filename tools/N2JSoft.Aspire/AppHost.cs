@@ -6,7 +6,11 @@ var mainDatabase = postgres.AddDatabase("database");
 var webapi = builder.AddProject<Projects.WebApi>("webapi")
     .WithReference(mainDatabase)
     .WaitFor(postgres)
-    .WaitFor(mainDatabase);
+    .WaitFor(mainDatabase)
+    .WithUrlForEndpoint("https", _ => new()
+    {
+        Url = "/scalar", DisplayText = "Scalar"
+    });
 
 builder.AddJavaScriptApp("angular", "../../frontend", "start")
     .WithReference(webapi)
