@@ -39,7 +39,8 @@ These are decided in the Foundation spec; slices follow them unless their own sp
   (e.g. `expense.quota_exceeded`). Unknown routes and unsupported versions answer a `404` ProblemDetails.
   The UI maps `code` to its French message.
 - **API:** URL-segment versioning, all endpoints under `/v1/...`; the Angular app calls `/api/v1/...`
-  through the dev proxy.
+  through the dev proxy. Lists are paged: `?page=&pageSize=` (1-based, default 20, at most 100) returning
+  `PagedResult<T>` (`items`, `page`, `pageSize`, `totalCount`).
 - **Tests:** xUnit v3 on Microsoft.Testing.Platform, Shouldly, NSubstitute.
   - *Unit* — Domain + command handlers.
   - *Acceptance* — Reqnroll (Gherkin in **English**) + Testcontainers Postgres + `WebApplicationFactory`.

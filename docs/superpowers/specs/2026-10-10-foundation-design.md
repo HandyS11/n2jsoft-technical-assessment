@@ -30,7 +30,7 @@ slice copies patterns that are known to work.
 - Any change to the `User` model beyond moving it (full model is slice 2).
 - Write-side abstractions (`IUnitOfWork`, repositories): the first command arrives in slice 2, which
   creates them following the conventions below.
-- Forms, error display and pagination in the frontend.
+- Forms, mapping error `code`s to French messages, and pagination controls in the frontend.
 - A generated TypeScript API client (noted as a possible improvement).
 - Migrating the frontend to zoneless change detection.
 
@@ -98,6 +98,7 @@ Application/
     Queries/    I<Feature>Queries.cs + DTO records
   Abstractions/ I<Aggregate>Repository.cs, IUnitOfWork.cs     (created from slice 2 onward)
   Exceptions/   NotFoundException.cs
+  Paging/       PageRequest.cs, PagedResult.cs
   DependencyInjection.cs   AddApplication(this IServiceCollection)  (created with the first handler, slice 2)
 ```
 
@@ -105,21 +106,24 @@ Application/
   rules are enforced), and persist through `IUnitOfWork.SaveChangesAsync`. Unit-tested.
 - **Queries** are interfaces returning DTOs; `Infrastructure` implements them with `AsNoTracking`
   projections (`Select`, `Skip`/`Take`). No logic; covered by the Acceptance tier.
+- **Lists are paged.** A list query takes a `PageRequest(Page, PageSize)` (1-based, default size 20, at
+  most 100) and returns `PagedResult<T>(Items, Page, PageSize, TotalCount)`, sorted on a unique key last
+  so pages stay stable. Endpoints read `?page=&pageSize=` and validate them with `[Range]` (`400` otherwise).
 - Endpoints inject a handler or a query interface directly; there is no mediator.
 
 ### Walking skeleton in this slice
 
 - `Domain/Entities/User.cs` — moved as is (`Id`, `FirstName`, `LastName`), made `public`.
-- `Application/Users/Queries/IUserQueries.cs` — `Task<IReadOnlyList<UserSummary>> ListAsync(CancellationToken)`;
+- `Application/Users/Queries/IUserQueries.cs` — `Task<PagedResult<UserSummary>> ListAsync(PageRequest, CancellationToken)`;
   `UserSummary(Guid Id, string Name)`.
 - `Infrastructure/Users/UserQueries.cs` — EF projection, `Name = FirstName + " " + LastName`.
 - `Infrastructure/Persistence/` — `AppDbContext`, `UserEntityTypeConfiguration`, `SeedAsync` (same two
-  seeded users), migrations. The `Initial` migration is regenerated under the new namespace; nothing is
-  deployed, so no migration history is kept.
+  seeded users), migrations. The `Initial` migration moves to the new namespace and keeps its ID
+  (`20251015145618_Initial`), so a database that already applied it still migrates.
 - `Infrastructure/DependencyInjection.cs` — `AddInfrastructure(this IHostApplicationBuilder)` registers
   the Aspire Npgsql DbContext (connection name `database`, async seeding) and query implementations;
   a `MigrateDatabaseAsync(this IServiceProvider)` helper replaces the inline migration in `Program`.
-- `WebApi/Endpoints/UserEndpoints.cs` — `GET /v1/users` → `IUserQueries.ListAsync`.
+- `WebApi/Endpoints/UserEndpoints.cs` — `GET /v1/users?page=&pageSize=` → `IUserQueries.ListAsync`.
 
 ## WebApi host
 
@@ -143,7 +147,7 @@ Application/
 
   `detail` is English developer text; the frontend maps `code` to its French user message.
 - **Unchanged.** `/health` health checks, HTTPS redirection, Development-only migration at startup
-  (log and stop on failure, as today).
+  (log and stop on failure, as today). The process now exits with code 1, so Aspire shows the failure.
 - **Redis removal.** Delete `AddRedisClient`, the `cache` resource and `WithReference(cache)` /
   `WaitFor(cache)` in the AppHost, and the `Aspire.StackExchange.Redis` / `Aspire.Hosting.Redis`
   package entries.
@@ -157,14 +161,16 @@ Application/
 
   ```text
   src/app/
-    core/                  shared code (empty in this slice)
+    core/
+      paged-result.ts      interface PagedResult<T> { items; page; pageSize; totalCount }
     features/users/
       user-summary.ts      interface UserSummary { id: string; name: string }
-      users.api.ts         injectable; list(): Observable<UserSummary[]> → GET /api/v1/users
-      user-list.page.ts    standalone, consumes the API with toSignal, renders a <ul> of names
+      users.api.ts         injectable; list(): Observable<PagedResult<UserSummary>> → GET /api/v1/users
+      user-list.page.ts    standalone, consumes the API with toSignal, renders a <ul> of the first page's
+                           names, or a French message if the request fails
   ```
 
-- `app.routes.ts`: `''` redirects to `users`; `users` lazy-loads `user-list.page`.
+- `app.routes.ts`: `''` and unknown URLs (`**`) redirect to `users`; `users` lazy-loads `user-list.page`.
 - UI text in French; Tailwind used sparingly; zone.js setup unchanged.
 - Vitest specs: `users.api.spec.ts` (calls `GET /api/v1/users`, via `HttpTestingController`) and
   `user-list.page.spec.ts` (renders the names returned by the API). The existing `app.spec.ts` is

@@ -109,6 +109,9 @@ Réalisé :
 - **CQRS léger, sans médiateur** : un handler par cas d'usage en écriture (à partir de la tranche 2) ; en
   lecture, des interfaces de requêtes déclarées dans `Application` et implémentées par des projections EF Core
   `AsNoTracking`. MediatR est devenu payant et n'apporte rien à cette taille de projet.
+- **Listes paginées** côté API : `GET /v1/users?page=1&pageSize=20` (100 au plus) renvoie
+  `{ items, page, pageSize, totalCount }`. Le contrat `/v1` n'aura pas à changer quand le front ajoutera la
+  pagination.
 - **Versionnement d'API** par segment d'URL (`/v1/users`) avec `Asp.Versioning` : visible dans les URL et dans
   la documentation. Une version inconnue répond `404`.
 - **OpenAPI + Scalar** en développement uniquement : un document par version, et un lien « Scalar » sur la
@@ -120,7 +123,7 @@ Réalisé :
   - `500` sans détail technique hors développement.
 - **Redis supprimé** : il n'était pas utilisé et aurait imposé un conteneur de plus à chaque niveau de tests.
 - **Front** : la page d'accueil Nx est remplacée par une coquille en français (locale `fr-FR`), avec la liste
-  des utilisateurs.
+  des utilisateurs (message d'erreur si l'API ne répond pas). Une URL inconnue ramène à cette liste.
 - **CI** : build et tests unitaires sur Ubuntu, Windows et macOS ; les tests qui ont besoin de Docker
   (acceptation, bout en bout) tournent sur Ubuntu uniquement.
 
@@ -142,6 +145,8 @@ Réalisé :
 
 ### Pistes d'amélioration
 
+- Ajouter les contrôles de pagination à la liste des utilisateurs : elle n'affiche pour l'instant que la première
+  page (20 utilisateurs).
 - Générer le client TypeScript à partir du document OpenAPI, au lieu de maintenir les interfaces à la main.
 - Passer le front en détection de changements sans zone.js (zoneless).
 - Supprimer le script `prestart: npm install` du front : Aspire 13.6 installe déjà les dépendances avant de
