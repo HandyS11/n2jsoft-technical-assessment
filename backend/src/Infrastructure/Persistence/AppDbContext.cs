@@ -1,11 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
+using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using WebApi.Domain.Entities;
 
-namespace WebApi.Infrastructure.Persistence;
+namespace Infrastructure.Persistence;
 
-[SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes",
-    Justification = "Instantiated by the DI container via AddNpgsqlDbContext registration.")]
 internal sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     protected override void OnModelCreating(ModelBuilder modelBuilder)

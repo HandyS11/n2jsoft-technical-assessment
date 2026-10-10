@@ -404,6 +404,7 @@ dotnet_diagnostic.CA1819.severity = none # Properties should not return arrays �
 dotnet_diagnostic.CA1003.severity = none # Use generic event handler — wrapping EventHandler<string/Exception/T> in EventArgs subclasses is a breaking public API change
 dotnet_diagnostic.CA1062.severity = none # Validate parameters — nullable reference types provide equivalent compile-time null safety; runtime guards are redundant noise
 dotnet_diagnostic.CA1848.severity = none # LoggerMessage source-gen is overkill for this bot's low-volume logging
+dotnet_diagnostic.CA1812.severity = none # Avoid uninstantiated internal classes — internal classes created by DI (queries, DbContext, handlers) are reported as never instantiated
 
 dotnet_diagnostic.IDE0058.severity = none # Expression not used (boring with extension methods) _ = Foo()
 
@@ -471,7 +472,7 @@ generated_code = true
 dotnet_diagnostic.CA2007.severity = none # ConfigureAwait not required in console-app entry points
 dotnet_diagnostic.CS1591.severity = none # XML docs not required in sample apps
 
-[tests/**]
+[backend/tests/**]
 dotnet_diagnostic.CA2007.severity = none # ConfigureAwait not required in test projects
 dotnet_diagnostic.CS1591.severity = none # XML docs not required in test projects
 dotnet_diagnostic.VSTHRD003.severity = none # Awaiting stored Task fields is acceptable in test infrastructure

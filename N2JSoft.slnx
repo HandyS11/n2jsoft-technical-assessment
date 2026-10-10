@@ -1,9 +1,14 @@
 <Solution>
   <Folder Name="/backend/" />
   <Folder Name="/backend/src/">
+    <Project Path="backend/src/Application/Application.csproj" />
+    <Project Path="backend/src/Domain/Domain.csproj" />
+    <Project Path="backend/src/Infrastructure/Infrastructure.csproj" />
     <Project Path="backend/src/WebApi/WebApi.csproj" />
   </Folder>
-  <Folder Name="/backend/tests/" />
+  <Folder Name="/backend/tests/">
+    <Project Path="backend/tests/UnitTests/UnitTests.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />

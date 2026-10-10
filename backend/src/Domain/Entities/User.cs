@@ -1,6 +1,6 @@
-namespace WebApi.Domain.Entities;
+namespace Domain.Entities;
 
-internal sealed class User
+public sealed class User
 {
     public Guid Id { get; set; }
     public required string FirstName { get; init; }

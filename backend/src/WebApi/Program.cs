@@ -1,16 +1,10 @@
-using Microsoft.EntityFrameworkCore;
-using WebApi.Infrastructure.Api;
-using WebApi.Infrastructure.Persistence;
+using Infrastructure;
+using WebApi.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddNpgsqlDbContext<AppDbContext>(connectionName: "database",
-    configureDbContextOptions: options =>
-        options.UseAsyncSeeding(async (context, _, cancellationToken) =>
-            await AppDbContext.SeedAsync(context, cancellationToken).ConfigureAwait(false)));
-builder.Services
-    .AddOpenApi()
-    .AddPersistence();
+builder.AddInfrastructure();
+builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
@@ -19,14 +13,11 @@ if (app.Environment.IsDevelopment())
 {
     try
     {
-        using var sp = app.Services.CreateScope();
-        await sp.ServiceProvider.GetRequiredService<AppDbContext>()
-            .Database.MigrateAsync().ConfigureAwait(false);
+        await app.Services.MigrateDatabaseAsync().ConfigureAwait(false);
     }
     catch (Exception e)
     {
-        app.Services.GetRequiredService<ILogger<Program>>()
-            .LogError(e, "An error occurred while migrating the database.");
+        app.Logger.LogError(e, "An error occurred while migrating the database.");
         return;
     }
 

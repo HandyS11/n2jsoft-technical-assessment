@@ -1,8 +1,8 @@
+using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using WebApi.Domain.Entities;
 
-namespace WebApi.Infrastructure.Persistence;
+namespace Infrastructure.Persistence;
 
 internal sealed class UserEntityTypeConfiguration : IEntityTypeConfiguration<User>
 {
