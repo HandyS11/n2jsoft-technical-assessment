@@ -23,12 +23,14 @@
       "cache": true,
       "inputs": [
         "default",
+        "^default",
         "{workspaceRoot}/.eslintrc.json",
         "{workspaceRoot}/.eslintignore",
-        "{workspaceRoot}/eslint.config.mjs"
+        "{workspaceRoot}/eslint.config.mjs",
+        "{workspaceRoot}/tools/eslint-rules/**/*"
       ]
     },
-    "@nx/vite:test": {
+    "@nx/vitest:test": {
       "cache": true,
       "inputs": ["default", "^production"]
     }
@@ -38,7 +40,7 @@
       "e2eTestRunner": "none",
       "linter": "eslint",
       "style": "css",
-      "unitTestRunner": "vitest"
+      "unitTestRunner": "vitest-analog"
     }
   },
   "defaultProject": "n2f"
