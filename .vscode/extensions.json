@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    "editorconfig.editorconfig",
+    "bierner.markdown-preview-github-styles",
+    "bierner.markdown-mermaid",
+    "DavidAnson.vscode-markdownlint",
+    "microsoft-aspire.aspire-vscode",
+    "ms-dotnettools.csdevkit",
+    "ms-dotnettools.vscode-dotnet-runtime",
+    "formulahendry.dotnet-test-explorer",
+    "jetbrains.resharper-code"
+  ],
+  "unwantedRecommendations": [
+    "ms-dotnettools.vscodeintellicode-csharp"
+  ]
+}

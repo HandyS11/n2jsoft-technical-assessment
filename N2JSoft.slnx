@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/backend/" />
+  <Folder Name="/backend/src/">
+    <Project Path="backend/src/WebApi/WebApi.csproj" />
+  </Folder>
+  <Folder Name="/backend/tests/" />
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="NuGet.config" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/N2JSoft.Aspire/N2JSoft.Aspire.csproj" />
+  </Folder>
+</Solution>
