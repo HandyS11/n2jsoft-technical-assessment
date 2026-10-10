@@ -2,6 +2,9 @@
 # package ecosystems to update and where the package manifests are located.
 # Please see the documentation for all configuration options:
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# Groups are matched in order (first match wins); each ecosystem ends with a
+# catch-all group so no dependency gets its own PR.
 
 version: 2
 updates:
@@ -10,8 +13,26 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      aspire:
+        patterns:
+          - "Aspire.*"
+      aspnetcore-efcore:
+        patterns:
+          - "Microsoft.AspNetCore.*"
+          - "Microsoft.EntityFrameworkCore*"
+          - "dotnet-ef"
+      analyzers:
+        patterns:
+          - "Microsoft.CodeAnalysis.*"
+          - "Microsoft.VisualStudio.Threading.Analyzers"
+          - "Roslynator.*"
+          - "SonarAnalyzer.*"
+      nuget-other:
+        patterns:
+          - "*"
 
-  # .NET SDK pin (global.json).
+  # .NET SDK pin (global.json). Prereleases are skipped via `allowPrerelease: false`.
   - package-ecosystem: "dotnet-sdk"
     directory: "/"
     schedule:
@@ -22,9 +43,57 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    groups:
+      angular:
+        patterns:
+          - "@angular/*"
+          - "@angular-devkit/*"
+          - "@schematics/angular"
+          - "angular-eslint"
+          - "rxjs"
+          - "zone.js"
+      nx:
+        patterns:
+          - "nx"
+          - "@nx/*"
+      vite-vitest:
+        patterns:
+          - "vite"
+          - "vitest"
+          - "@vitest/*"
+          - "@analogjs/*"
+          - "jsdom"
+      eslint-prettier:
+        patterns:
+          - "eslint"
+          - "@eslint/*"
+          - "eslint-*"
+          - "typescript-eslint"
+          - "@typescript-eslint/*"
+          - "prettier"
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+          - "postcss"
+          - "autoprefixer"
+      typescript:
+        patterns:
+          - "typescript"
+          - "tslib"
+          - "@types/*"
+          - "@swc/*"
+          - "@swc-node/*"
+      npm-other:
+        patterns:
+          - "*"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
