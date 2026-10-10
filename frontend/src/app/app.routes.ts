@@ -7,4 +7,5 @@ export const appRoutes: Route[] = [
     title: 'Utilisateurs',
     loadComponent: () => import('./features/users/user-list.page'),
   },
+  { path: '**', redirectTo: 'users' },
 ];
