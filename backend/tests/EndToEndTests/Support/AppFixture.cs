@@ -10,7 +10,10 @@ public sealed class AppFixture : IAsyncLifetime
     /// <summary>The first run installs the frontend's npm packages and Chromium: allow plenty of time.</summary>
     private static readonly TimeSpan StartupTimeout = TimeSpan.FromMinutes(5);
 
-    private Uri? _angularUrl;
+    /// <summary>Bounds teardown, so an application that does not stop cannot hang the test run.</summary>
+    private static readonly TimeSpan StopTimeout = TimeSpan.FromMinutes(1);
+
+    private static readonly string[] ResourceNames = ["webapi", "angular"];
 
     private DistributedApplication? _app;
     private IBrowser? _browser;
@@ -20,36 +23,87 @@ public sealed class AppFixture : IAsyncLifetime
 
     public IBrowser Browser => _browser ?? throw NotStarted();
 
-    public Uri AngularUrl => _angularUrl ?? throw NotStarted();
+    public Uri AngularUrl
+    {
+        get => field ?? throw NotStarted();
+        private set;
+    }
 
     public async ValueTask InitializeAsync()
     {
-        using var timeout = new CancellationTokenSource(StartupTimeout);
         try
         {
-            await StartAsync(timeout.Token);
+            await StartWithinTimeoutAsync();
         }
-        catch
+        catch (Exception startupFailure)
         {
             // xUnit does not dispose a fixture whose initialization failed: stop what already started.
-            await DisposeAsync();
+            await DisposeAfterFailedStartAsync(startupFailure);
             throw;
         }
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_browser is not null)
+        try
         {
-            await _browser.DisposeAsync();
+            if (_browser is not null)
+            {
+                await _browser.DisposeAsync();
+            }
+
+            _playwright?.Dispose();
+        }
+        finally
+        {
+            // The Postgres container, the webapi and the npm dev server must stop even if the browser did not close.
+            await StopAppAsync();
+        }
+    }
+
+    private async Task DisposeAfterFailedStartAsync(Exception startupFailure)
+    {
+        try
+        {
+            await DisposeAsync();
+        }
+        catch (Exception disposeFailure)
+        {
+            // Keep the startup failure first: it is the one to fix.
+            throw new AggregateException("The application failed to start, then failed to stop.", startupFailure,
+                disposeFailure);
+        }
+    }
+
+    private async Task StopAppAsync()
+    {
+        if (_app is null)
+        {
+            return;
         }
 
-        _playwright?.Dispose();
-
-        if (_app is not null)
+        try
         {
-            await _app.StopAsync();
+            using var timeout = new CancellationTokenSource(StopTimeout);
+            await _app.StopAsync(timeout.Token);
+        }
+        finally
+        {
             await _app.DisposeAsync();
+        }
+    }
+
+    private async Task StartWithinTimeoutAsync()
+    {
+        using var timeout = new CancellationTokenSource(StartupTimeout);
+        try
+        {
+            await StartAsync(timeout.Token);
+        }
+        catch (OperationCanceledException e) when (timeout.IsCancellationRequested)
+        {
+            throw new TimeoutException($"The application was not ready after {StartupTimeout.TotalMinutes} minutes.",
+                e);
         }
     }
 
@@ -61,12 +115,7 @@ public sealed class AppFixture : IAsyncLifetime
             await DistributedApplicationTestingBuilder.CreateAsync<Projects.N2JSoft_Aspire>(cancellationToken);
         _app = await builder.BuildAsync(cancellationToken);
         await _app.StartAsync(cancellationToken);
-        await _app.ResourceNotifications.WaitForResourceAsync("webapi", KnownResourceStates.Running, cancellationToken);
-        await _app.ResourceNotifications.WaitForResourceAsync("angular", KnownResourceStates.Running,
-            cancellationToken);
-
-        _angularUrl = _app.GetEndpoint("angular", "http");
-        await WaitForApiThroughAngularAsync(_angularUrl, cancellationToken);
+        AngularUrl = await WaitUntilReadyAsync(_app, cancellationToken);
 
         _playwright = await Playwright.CreateAsync();
         _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
@@ -86,6 +135,49 @@ public sealed class AppFixture : IAsyncLifetime
             throw new InvalidOperationException(
                 $"Installing Chromium for Playwright failed with exit code {exitCode}.");
         }
+    }
+
+    /// <summary>
+    /// Waits for the pages to be usable, but fails as soon as the webapi or the Angular dev server stops (failed
+    /// startup migration, port conflict, build error) instead of waiting for the whole startup timeout.
+    /// </summary>
+    private static async Task<Uri> WaitUntilReadyAsync(DistributedApplication app, CancellationToken cancellationToken)
+    {
+        using var stopWatching = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var ready = WaitForPagesAsync(app, stopWatching.Token);
+        Task[] readyOrStopped =
+            [ready, .. ResourceNames.Select(name => ThrowWhenStoppedAsync(app, name, stopWatching.Token))];
+
+        var first = await Task.WhenAny(readyOrStopped);
+        await stopWatching.CancelAsync();
+        // Throws if a resource stopped first, or if the startup timeout elapsed.
+        await first;
+        return await ready;
+    }
+
+    private static async Task ThrowWhenStoppedAsync(
+        DistributedApplication app,
+        string resourceName,
+        CancellationToken cancellationToken)
+    {
+        var stopped = await app.ResourceNotifications.WaitForResourceAsync(resourceName,
+            resourceEvent => resourceEvent.Snapshot.State?.Text is { } state &&
+                             KnownResourceStates.TerminalStates.Contains(state),
+            cancellationToken);
+        throw new InvalidOperationException(
+            $"The {resourceName} resource stopped ({stopped.Snapshot.State?.Text}, exit code " +
+            $"{stopped.Snapshot.ExitCode}) before the application was ready.");
+    }
+
+    private static async Task<Uri> WaitForPagesAsync(DistributedApplication app, CancellationToken cancellationToken)
+    {
+        await app.ResourceNotifications.WaitForResourceAsync("webapi", KnownResourceStates.Running, cancellationToken);
+        await app.ResourceNotifications.WaitForResourceAsync("angular", KnownResourceStates.Running,
+            cancellationToken);
+
+        var angularUrl = app.GetEndpoint("angular", "http");
+        await WaitForApiThroughAngularAsync(angularUrl, cancellationToken);
+        return angularUrl;
     }
 
     /// <summary>
@@ -110,6 +202,10 @@ public sealed class AppFixture : IAsyncLifetime
             catch (HttpRequestException)
             {
                 // The dev server or the webapi is not listening yet.
+            }
+            catch (TaskCanceledException e) when (e.InnerException is TimeoutException)
+            {
+                // HttpClient's timeout: the dev server accepted the request but is still building. Ask again.
             }
 
             await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
