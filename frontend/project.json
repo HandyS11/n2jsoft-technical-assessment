@@ -10,6 +10,7 @@
     "build": {
       "executor": "@angular/build:application",
       "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/n2f",
         "browser": "./src/main.ts",
@@ -44,12 +45,15 @@
           "extractLicenses": false,
           "sourceMap": true
         }
-      },
-      "defaultConfiguration": "production"
+      }
     },
     "serve": {
       "continuous": true,
       "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "proxyConfig": "proxy.conf.js"
+      },
       "configurations": {
         "production": {
           "buildTarget": "n2f:build:production"
@@ -57,10 +61,6 @@
         "development": {
           "buildTarget": "n2f:build:development"
         }
-      },
-      "defaultConfiguration": "development",
-      "options": {
-        "proxyConfig": "proxy.conf.js"
       }
     },
     "extract-i18n": {
@@ -76,7 +76,7 @@
       }
     },
     "test": {
-      "executor": "@nx/vite:test",
+      "executor": "@nx/vitest:test",
       "outputs": ["{options.reportsDirectory}"],
       "options": {
         "reportsDirectory": "coverage/n2f"
