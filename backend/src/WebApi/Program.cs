@@ -35,6 +35,8 @@ if (app.Environment.IsDevelopment())
     catch (Exception e)
     {
         app.Logger.LogError(e, "An error occurred while migrating the database.");
+        // Exit code 1, not 0: the Aspire dashboard and the end-to-end fixture then report a failure, not a clean stop.
+        Environment.ExitCode = 1;
         return;
     }
 
