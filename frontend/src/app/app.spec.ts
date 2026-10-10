@@ -1,18 +1,21 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { App } from './app';
-import { NxWelcome } from './nx-welcome';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [App, NxWelcome],
+      imports: [App],
+      providers: [provideRouter([])],
     }).compileComponents();
   });
 
-  it('should render title', () => {
+  it('links to the users page from the navigation', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Welcome to n2f');
+    const link = (fixture.nativeElement as HTMLElement).querySelector('nav a');
+
+    expect(link?.textContent?.trim()).toBe('Utilisateurs');
+    expect(link?.getAttribute('href')).toBe('/users');
   });
 });

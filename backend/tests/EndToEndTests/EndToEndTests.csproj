@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="Aspire.Hosting.Testing" />
+        <PackageReference Include="Microsoft.Playwright" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- One AppHost and one browser for the whole run; each test opens its own browser context -->
+        <AssemblyAttribute Include="Xunit.AssemblyFixtureAttribute">
+            <_Parameter1>typeof(EndToEndTests.Support.AppFixture)</_Parameter1>
+            <_Parameter1_IsLiteral>true</_Parameter1_IsLiteral>
+        </AssemblyAttribute>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\tools\N2JSoft.Aspire\N2JSoft.Aspire.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,18 +1,28 @@
-using Microsoft.EntityFrameworkCore;
-using WebApi.Infrastructure.Api;
-using WebApi.Infrastructure.Persistence;
+using Asp.Versioning;
+using Infrastructure;
+using Scalar.AspNetCore;
+using WebApi.Endpoints;
+using WebApi.Errors;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddRedisClient(connectionName: "cache");
-builder.AddNpgsqlDbContext<AppDbContext>(connectionName: "database",
-    configureDbContextOptions: options =>
-        options.UseAsyncSeeding(async (context, _, cancellationToken) =>
-            await AppDbContext.SeedAsync(context, cancellationToken).ConfigureAwait(false)));
-builder.Services
-    .AddOpenApi()
-    .AddPersistence();
+builder.AddInfrastructure();
+builder.Services.AddErrorHandling(builder.Environment);
+builder.Services.AddValidation();
 builder.Services.AddHealthChecks();
+// 1.0 is the default API version. This AddOpenApi() replaces services.AddOpenApi(): one document per version.
+builder.Services
+    .AddApiVersioning(options =>
+    {
+        options.ReportApiVersions = true;
+        options.ApiVersionReader = new UrlSegmentApiVersionReader();
+    })
+    .AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV";
+        options.SubstituteApiVersionInUrl = true;
+    })
+    .AddOpenApi();
 
 var app = builder.Build();
 
@@ -20,20 +30,28 @@ if (app.Environment.IsDevelopment())
 {
     try
     {
-        using var sp = app.Services.CreateScope();
-        await sp.ServiceProvider.GetRequiredService<AppDbContext>()
-            .Database.MigrateAsync().ConfigureAwait(false);
+        await app.Services.MigrateDatabaseAsync().ConfigureAwait(false);
     }
     catch (Exception e)
     {
-        app.Services.GetRequiredService<ILogger<Program>>()
-            .LogError(e, "An error occurred while migrating the database.");
+        app.Logger.LogError(e, "An error occurred while migrating the database.");
+        // Exit code 1, not 0: the Aspire dashboard and the end-to-end fixture then report a failure, not a clean stop.
+        Environment.ExitCode = 1;
         return;
     }
 
-    app.MapOpenApi();
+    app.MapOpenApi().WithDocumentPerVersion();
+    app.MapScalarApiReference(options =>
+    {
+        foreach (var description in app.DescribeApiVersions())
+        {
+            options.AddDocument(description.GroupName);
+        }
+    });
 }
 
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 app.UseHttpsRedirection();
 
 app.MapUserEndpoints();

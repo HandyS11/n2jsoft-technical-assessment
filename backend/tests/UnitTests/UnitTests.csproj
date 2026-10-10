@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="NSubstitute" />
+        <PackageReference Include="NSubstitute.Analyzers.CSharp">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Application\Application.csproj" />
+        <ProjectReference Include="..\..\src\Domain\Domain.csproj" />
+        <ProjectReference Include="..\..\src\WebApi\WebApi.csproj" />
+    </ItemGroup>
+
+</Project>

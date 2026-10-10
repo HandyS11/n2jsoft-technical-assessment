@@ -95,4 +95,61 @@ La page de visualisation d'une note de frais permet :
 
 ## Mes Notes
 
-À compléter par vos soins.
+Le travail est découpé en tranches verticales décrites dans la [feuille de route](docs/superpowers/roadmap.md).
+Chaque tranche a sa spécification (`docs/superpowers/specs/`) et son plan d'implémentation
+(`docs/superpowers/plans/`).
+
+### Tranche 1 — Fondations
+
+Réalisé :
+
+- **Clean Architecture** : le backend est découpé en `Domain`, `Application`, `Infrastructure` et `WebApi` (seul
+  point de composition). La règle de dépendance (`Domain ← Application ← Infrastructure`) est vérifiée par des
+  tests d'architecture. Les règles métier restent isolées et testables unitairement.
+- **CQRS léger, sans médiateur** : un handler par cas d'usage en écriture (à partir de la tranche 2) ; en
+  lecture, des interfaces de requêtes déclarées dans `Application` et implémentées par des projections EF Core
+  `AsNoTracking`. MediatR est devenu payant et n'apporte rien à cette taille de projet.
+- **Listes paginées** côté API : `GET /v1/users?page=1&pageSize=20` (100 au plus) renvoie
+  `{ items, page, pageSize, totalCount }`. Le contrat `/v1` n'aura pas à changer quand le front ajoutera la
+  pagination.
+- **Versionnement d'API** par segment d'URL (`/v1/users`) avec `Asp.Versioning` : visible dans les URL et dans
+  la documentation. Une version inconnue répond `404`.
+- **OpenAPI + Scalar** en développement uniquement : un document par version, et un lien « Scalar » sur la
+  ressource `webapi` du dashboard Aspire.
+- **Contrat d'erreur unique** (RFC 9457 ProblemDetails) :
+  - `400` pour la validation ;
+  - `404` pour une ressource introuvable ;
+  - `422` pour une règle métier violée, avec un `code` stable que le front traduit en français ;
+  - `500` sans détail technique hors développement.
+- **Redis supprimé** : il n'était pas utilisé et aurait imposé un conteneur de plus à chaque niveau de tests.
+- **Front** : la page d'accueil Nx est remplacée par une coquille en français (locale `fr-FR`), avec la liste
+  des utilisateurs (message d'erreur si l'API ne répond pas). Une URL inconnue ramène à cette liste.
+- **CI** : build et tests unitaires sur Ubuntu, Windows et macOS ; les tests qui ont besoin de Docker
+  (acceptation, bout en bout) tournent sur Ubuntu uniquement.
+
+### Lancer les tests
+
+| Niveau                                      | Commande                                                   | Prérequis       |
+|---------------------------------------------|------------------------------------------------------------|-----------------|
+| Unitaires (xUnit v3, Shouldly, NSubstitute) | `dotnet test --project backend/tests/UnitTests`            | —               |
+| Acceptation (Reqnroll, Testcontainers)      | `dotnet test --project backend/tests/AcceptanceTests`      | Docker          |
+| Bout en bout (Aspire, Playwright)           | `dotnet test --project backend/tests/EndToEndTests`        | Docker, Node.js |
+| Front (Vitest)                              | `cd frontend && npx nx run-many -t lint test build`        | Node.js         |
+
+- Les tests de bout en bout installent Chromium automatiquement au premier lancement (dans
+  `~/.cache/ms-playwright`). Sous Linux, s'il manque des bibliothèques système :
+  `pwsh backend/tests/EndToEndTests/bin/Debug/net10.0/playwright.ps1 install-deps chromium`.
+- En cas d'échec, une trace et une capture d'écran sont écrites dans
+  `backend/tests/EndToEndTests/bin/<Configuration>/net10.0/playwright-artifacts/`.
+- Couverture de code : ajouter `--coverage --coverage-output-format cobertura --results-directory artifacts/coverage`.
+
+### Pistes d'amélioration
+
+- Ajouter les contrôles de pagination à la liste des utilisateurs : elle n'affiche pour l'instant que la première
+  page (20 utilisateurs).
+- Générer le client TypeScript à partir du document OpenAPI, au lieu de maintenir les interfaces à la main.
+- Passer le front en détection de changements sans zone.js (zoneless).
+- Supprimer le script `prestart: npm install` du front : Aspire 13.6 installe déjà les dépendances avant de
+  lancer l'application.
+- Ajouter un health check Aspire sur `webapi`. Il sonde l'endpoint https, et échoue donc tant que le certificat
+  de développement ASP.NET Core n'est pas approuvé (c'est le cas en CI) : le front attendrait indéfiniment.

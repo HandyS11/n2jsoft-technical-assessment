@@ -42,16 +42,89 @@ jobs:
           dotnet jb cleanupcode N2JSoft.slnx --profile="ReformatAndReorder" --no-build --verbosity=ERROR
           git diff --exit-code
 
-      - name: Test
-        run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+      - name: Unit tests
+        run: >-
+          dotnet test --project backend/tests/UnitTests --no-build --configuration Release
+          --coverage --coverage-output-format cobertura --coverage-output unit-tests.cobertura.xml
+          --results-directory artifacts/coverage
 
       - name: Upload coverage reports
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-reports
-          path: ./coverage/**/coverage.cobertura.xml
+          path: artifacts/coverage/*.cobertura.xml
           retention-days: 14
+
+  backend-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Acceptance tests (Testcontainers uses the runner's Docker)
+        run: dotnet test --project backend/tests/AcceptanceTests --no-build --configuration Release
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Create the ASP.NET Core development certificate (webapi's https endpoint)
+        run: dotnet dev-certs https
+
+      - name: Install Playwright Chromium and its system dependencies
+        run: pwsh backend/tests/EndToEndTests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: End-to-end tests
+        run: dotnet test --project backend/tests/EndToEndTests --no-build --configuration Release
+
+      - name: Upload Playwright traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-artifacts
+          path: backend/tests/EndToEndTests/bin/Release/net10.0/playwright-artifacts/
+          retention-days: 14
+          if-no-files-found: ignore
 
   frontend:
     runs-on: ubuntu-latest
