@@ -385,6 +385,7 @@ dotnet_analyzer_diagnostic.category-roslynator.severity = warning
 roslynator_analyzers.enabled_by_default = true
 roslynator_refactorings.enabled = true
 roslynator_compiler_diagnostic_fixes.enabled = true
+dotnet_diagnostic.RCS1194.severity = none # Implement exception constructors — same reason as CA1032
 
 # Dotnet Diagnostic Rules
 
@@ -405,6 +406,7 @@ dotnet_diagnostic.CA1003.severity = none # Use generic event handler — wrappin
 dotnet_diagnostic.CA1062.severity = none # Validate parameters — nullable reference types provide equivalent compile-time null safety; runtime guards are redundant noise
 dotnet_diagnostic.CA1848.severity = none # LoggerMessage source-gen is overkill for this bot's low-volume logging
 dotnet_diagnostic.CA1812.severity = none # Avoid uninstantiated internal classes — internal classes created by DI (queries, DbContext, handlers) are reported as never instantiated
+dotnet_diagnostic.CA1032.severity = none # Implement standard exception constructors — our exceptions require their context (resource, rule code); parameterless constructors would allow meaningless instances
 
 dotnet_diagnostic.IDE0058.severity = none # Expression not used (boring with extension methods) _ = Foo()
 

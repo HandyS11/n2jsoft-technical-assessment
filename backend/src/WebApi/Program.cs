@@ -1,9 +1,12 @@
 using Infrastructure;
 using WebApi.Endpoints;
+using WebApi.Errors;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddInfrastructure();
+builder.Services.AddErrorHandling(builder.Environment);
+builder.Services.AddValidation();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 
@@ -24,6 +27,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 app.UseHttpsRedirection();
 
 app.MapUserEndpoints();
