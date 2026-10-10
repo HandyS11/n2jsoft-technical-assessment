@@ -37,6 +37,21 @@ public sealed class ApiExceptionHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task NotFoundException_keeps_its_404_when_the_client_does_not_accept_json()
+    {
+        var context = ProblemDetailsTestContext.Create(_services);
+        context.Request.Headers.Accept = "application/xml";
+
+        var handled = await CreateHandler().TryHandleAsync(
+            context,
+            new NotFoundException("User", 42),
+            TestContext.Current.CancellationToken);
+
+        handled.ShouldBeTrue();
+        context.Response.StatusCode.ShouldBe(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
     public async Task BusinessRuleViolationException_is_written_as_a_422_problem_with_its_code()
     {
         var context = ProblemDetailsTestContext.Create(_services);

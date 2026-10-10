@@ -43,9 +43,13 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetailsS
 
         httpContext.Response.StatusCode = problemDetails.Status!.Value;
 
-        return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+        // The status is the contract; the body is only written when the client accepts JSON. Reporting "not
+        // handled" here would let the middleware turn a mapped 404 into a 500.
+        await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext, ProblemDetails = problemDetails, Exception = exception,
         }).ConfigureAwait(false);
+
+        return true;
     }
 }
