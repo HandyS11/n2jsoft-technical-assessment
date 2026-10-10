@@ -13,6 +13,14 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- Scenarios share one database that is reset before each scenario: they must not run concurrently -->
+        <AssemblyAttribute Include="Xunit.v3.ParallelizationAttribute">
+            <Mode>Xunit.Sdk.ParallelMode.None</Mode>
+            <Mode_IsLiteral>true</Mode_IsLiteral>
+        </AssemblyAttribute>
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\src\Infrastructure\Infrastructure.csproj" />
         <ProjectReference Include="..\..\src\WebApi\WebApi.csproj" />
     </ItemGroup>
