@@ -1,5 +1,6 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, EMPTY } from 'rxjs';
 import { UsersApi } from './users.api';
 
 @Component({
@@ -16,11 +17,23 @@ import { UsersApi } from './users.api';
       } @else {
         <p>Aucun utilisateur.</p>
       }
+    } @else if (failed()) {
+      <p role="alert">Impossible de charger les utilisateurs.</p>
     } @else {
       <p>Chargement…</p>
     }
   `,
 })
 export default class UserListPage {
-  protected readonly users = toSignal(inject(UsersApi).list());
+  protected readonly failed = signal(false);
+  protected readonly users = toSignal(
+    inject(UsersApi)
+      .list()
+      .pipe(
+        catchError(() => {
+          this.failed.set(true);
+          return EMPTY;
+        })
+      )
+  );
 }

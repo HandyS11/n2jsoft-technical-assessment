@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { UserSummary } from './user-summary';
 import UserListPage from './user-list.page';
 import { UsersApi } from './users.api';
@@ -40,5 +40,14 @@ describe('UserListPage', () => {
     const page = render(new Observable<UserSummary[]>());
 
     expect(page.textContent).toContain('Chargement…');
+  });
+
+  it('says so when the API fails', () => {
+    const page = render(throwError(() => new Error('Service unavailable')));
+
+    expect(page.querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+      'Impossible de charger les utilisateurs.'
+    );
+    expect(page.textContent).not.toContain('Chargement…');
   });
 });
