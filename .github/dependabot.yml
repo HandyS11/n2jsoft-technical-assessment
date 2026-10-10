@@ -28,6 +28,16 @@ updates:
           - "Microsoft.VisualStudio.Threading.Analyzers"
           - "Roslynator.*"
           - "SonarAnalyzer.*"
+      testing:
+        patterns:
+          - "xunit*"
+          - "Shouldly"
+          - "NSubstitute*"
+          - "Reqnroll*"
+          - "Testcontainers*"
+          - "Respawn"
+          - "Microsoft.Playwright"
+          - "Microsoft.Testing.*"
       nuget-other:
         patterns:
           - "*"
