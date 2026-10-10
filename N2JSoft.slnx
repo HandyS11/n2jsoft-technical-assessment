@@ -7,6 +7,7 @@
     <Project Path="backend/src/WebApi/WebApi.csproj" />
   </Folder>
   <Folder Name="/backend/tests/">
+    <Project Path="backend/tests/AcceptanceTests/AcceptanceTests.csproj" />
     <Project Path="backend/tests/UnitTests/UnitTests.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">

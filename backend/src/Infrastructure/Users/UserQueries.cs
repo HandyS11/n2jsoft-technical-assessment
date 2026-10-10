@@ -11,6 +11,8 @@ internal sealed class UserQueries(AppDbContext dbContext) : IUserQueries
     {
         return await dbContext.Set<User>()
             .AsNoTracking()
+            .OrderBy(user => user.LastName)
+            .ThenBy(user => user.FirstName)
             .Select(user => new UserSummary(user.Id, $"{user.FirstName} {user.LastName}"))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
