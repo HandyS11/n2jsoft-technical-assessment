@@ -1,6 +1,7 @@
 using System.Reflection;
 using Application.Users.Queries;
 using Domain.Entities;
+using Infrastructure;
 
 namespace UnitTests.Architecture;
 
@@ -8,6 +9,7 @@ public sealed class DependencyRuleTests
 {
     private static readonly Assembly DomainAssembly = typeof(User).Assembly;
     private static readonly Assembly ApplicationAssembly = typeof(IUserQueries).Assembly;
+    private static readonly Assembly InfrastructureAssembly = typeof(DependencyInjectionExtensions).Assembly;
 
     [Theory]
     [InlineData("Application")]
@@ -15,6 +17,8 @@ public sealed class DependencyRuleTests
     [InlineData("WebApi")]
     [InlineData("Microsoft.EntityFrameworkCore")]
     [InlineData("Microsoft.AspNetCore")]
+    [InlineData("Npgsql")]
+    [InlineData("Aspire")]
     public void Domain_does_not_depend_on(string forbidden)
     {
         ReferencedAssemblyNames(DomainAssembly)
@@ -26,10 +30,21 @@ public sealed class DependencyRuleTests
     [InlineData("WebApi")]
     [InlineData("Microsoft.EntityFrameworkCore")]
     [InlineData("Microsoft.AspNetCore")]
+    [InlineData("Npgsql")]
+    [InlineData("Aspire")]
     public void Application_does_not_depend_on(string forbidden)
     {
         ReferencedAssemblyNames(ApplicationAssembly)
             .ShouldNotContain(name => DependsOn(name, forbidden), $"Application must not reference {forbidden}");
+    }
+
+    [Theory]
+    [InlineData("WebApi")]
+    [InlineData("Microsoft.AspNetCore")]
+    public void Infrastructure_does_not_depend_on(string forbidden)
+    {
+        ReferencedAssemblyNames(InfrastructureAssembly)
+            .ShouldNotContain(name => DependsOn(name, forbidden), $"Infrastructure must not reference {forbidden}");
     }
 
     private static string[] ReferencedAssemblyNames(Assembly assembly)
