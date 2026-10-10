@@ -4,7 +4,6 @@ using WebApi.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddRedisClient(connectionName: "cache");
 builder.AddNpgsqlDbContext<AppDbContext>(connectionName: "database",
     configureDbContextOptions: options =>
         options.UseAsyncSeeding(async (context, _, cancellationToken) =>
