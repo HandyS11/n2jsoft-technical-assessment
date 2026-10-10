@@ -31,17 +31,22 @@ public abstract class PageTest(AppFixture fixture) : IAsyncLifetime
     {
         if (_context is not null)
         {
-            // TestState is already set here; TestStatus still says "Running" and cannot be used.
-            if (TestContext.Current.TestState?.Result == TestResult.Failed && _page is not null)
+            try
             {
-                await SaveFailureArtifactsAsync(_context, _page);
+                // TestState is already set here; TestStatus still says "Running" and cannot be used.
+                if (TestContext.Current.TestState?.Result == TestResult.Failed && _page is not null)
+                {
+                    await SaveFailureArtifactsAsync(_context, _page);
+                }
+                else
+                {
+                    await _context.Tracing.StopAsync();
+                }
             }
-            else
+            finally
             {
-                await _context.Tracing.StopAsync();
+                await _context.DisposeAsync();
             }
-
-            await _context.DisposeAsync();
         }
 
         GC.SuppressFinalize(this);
@@ -51,14 +56,30 @@ public abstract class PageTest(AppFixture fixture) : IAsyncLifetime
     {
         Directory.CreateDirectory(ArtifactsDirectory);
         var name = ArtifactName(TestContext.Current.Test?.TestDisplayName);
-        await page.ScreenshotAsync(new PageScreenshotOptions
+        await TryCaptureAsync("screenshot", () => page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(ArtifactsDirectory, $"{name}.png"), FullPage = true,
-        });
-        await context.Tracing.StopAsync(new TracingStopOptions
+        }));
+        await TryCaptureAsync("trace", () => context.Tracing.StopAsync(new TracingStopOptions
         {
             Path = Path.Combine(ArtifactsDirectory, $"{name}.zip")
-        });
+        }));
+    }
+
+    /// <summary>
+    /// The test already failed. An artifact that cannot be captured (the page crashed or closed) becomes a warning,
+    /// so that the real failure is the only error reported.
+    /// </summary>
+    private static async Task TryCaptureAsync(string artifact, Func<Task> capture)
+    {
+        try
+        {
+            await capture();
+        }
+        catch (PlaywrightException e)
+        {
+            TestContext.Current.AddWarning($"The {artifact} of the failed test could not be saved: {e.Message}");
+        }
     }
 
     private static string ArtifactName(string? testName)
