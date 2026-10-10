@@ -6,11 +6,14 @@ var mainDatabase = postgres.AddDatabase("database");
 var webapi = builder.AddProject<Projects.WebApi>("webapi")
     .WithReference(mainDatabase)
     .WaitFor(postgres)
-    .WaitFor(mainDatabase)
-    .WithUrlForEndpoint("https", _ => new()
-    {
-        Url = "/scalar", DisplayText = "Scalar"
-    });
+    .WaitFor(mainDatabase);
+
+// The webapi follows the AppHost's launch profile: under "http" it has no https endpoint.
+var scalarEndpoint = webapi.GetEndpoint("https").Exists ? "https" : "http";
+webapi.WithUrlForEndpoint(scalarEndpoint, _ => new()
+{
+    Url = "/scalar", DisplayText = "Scalar"
+});
 
 builder.AddJavaScriptApp("angular", "../../frontend", "start")
     .WithReference(webapi)
