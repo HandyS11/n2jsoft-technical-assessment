@@ -3,7 +3,7 @@ namespace AcceptanceTests.Support;
 /// <summary>One instance per scenario (Reqnroll context injection), disposed at the end of the scenario.</summary>
 public sealed class ApiDriver : IDisposable
 {
-    private readonly HttpClient _client = TestEnvironment.Factory.CreateClient();
+    private HttpClient _client = TestEnvironment.Factory.CreateClient();
     private HttpResponseMessage? _response;
 
     public HttpResponseMessage Response =>
@@ -13,6 +13,12 @@ public sealed class ApiDriver : IDisposable
     {
         _response?.Dispose();
         _client.Dispose();
+    }
+
+    public void UseDevelopmentEnvironment()
+    {
+        _client.Dispose();
+        _client = TestEnvironment.DevelopmentFactory.CreateClient();
     }
 
     public async Task GetAsync(string path)

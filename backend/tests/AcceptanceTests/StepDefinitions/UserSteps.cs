@@ -11,7 +11,7 @@ namespace AcceptanceTests.StepDefinitions;
 [Binding]
 public sealed class UserSteps(ApiDriver api)
 {
-    private const string UsersPath = "/users";
+    private const string UsersPath = "/v1/users";
 
     [Given("the following users exist")]
     public static async Task GivenTheFollowingUsersExistAsync(DataTable table)

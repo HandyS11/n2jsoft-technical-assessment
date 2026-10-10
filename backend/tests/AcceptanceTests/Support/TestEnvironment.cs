@@ -1,4 +1,5 @@
 using Infrastructure;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Npgsql;
 using Respawn;
@@ -14,9 +15,17 @@ public static class TestEnvironment
     private static PostgreSqlContainer? _postgres;
     private static ApiFactory? _factory;
     private static Respawner? _respawner;
+    private static WebApplicationFactory<Program>? _developmentFactory;
 
     public static WebApplicationFactory<Program> Factory =>
         _factory ?? throw new InvalidOperationException("The test environment is not started.");
+
+    /// <summary>
+    /// Built on first use: only the API documentation scenarios need the Development pipeline. Its startup
+    /// migration is a no-op on the already migrated container; the seed it inserts is wiped before the next scenario.
+    /// </summary>
+    public static WebApplicationFactory<Program> DevelopmentFactory =>
+        _developmentFactory ??= Factory.WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
 
     private static string ConnectionString =>
         _postgres?.GetConnectionString() ?? throw new InvalidOperationException("Postgres is not started.");
@@ -52,6 +61,11 @@ public static class TestEnvironment
 
     public static async Task StopAsync()
     {
+        if (_developmentFactory is not null)
+        {
+            await _developmentFactory.DisposeAsync();
+        }
+
         if (_factory is not null)
         {
             await _factory.DisposeAsync();

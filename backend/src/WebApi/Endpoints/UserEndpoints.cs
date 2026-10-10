@@ -7,7 +7,11 @@ internal static class UserEndpoints
 {
     public static IEndpointRouteBuilder MapUserEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGet("/users", ListUsersAsync);
+        var users = endpoints.NewVersionedApi("Users")
+            .MapGroup("/v{version:apiVersion}/users")
+            .HasApiVersion(1.0);
+
+        users.MapGet("/", ListUsersAsync);
 
         return endpoints;
     }

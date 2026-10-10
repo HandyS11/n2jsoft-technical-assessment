@@ -1,8 +1,5 @@
 @WebApi_HostAddress = http://localhost:5195
-@CompanyId = ""
-@EmployeeId = ""
 
-### Get users
-GET {{WebApi_HostAddress}}/users
+### List users
+GET {{WebApi_HostAddress}}/v1/users
 Accept: application/json
-

@@ -20,6 +20,12 @@ public sealed class HttpSteps(ApiDriver api)
         ((int)api.Response.StatusCode).ShouldBe(status);
     }
 
+    [Then("the response header {string} is {string}")]
+    public void ThenTheResponseHeaderIs(string name, string value)
+    {
+        api.Response.Headers.GetValues(name).ShouldHaveSingleItem().ShouldBe(value);
+    }
+
     [Then("the response is a problem with status {int}")]
     public async Task ThenTheResponseIsAProblemWithStatusAsync(int status)
     {
