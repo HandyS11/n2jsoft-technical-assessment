@@ -1,4 +1,6 @@
 using Application.Paging;
+using Domain.Entities;
+using Domain.ValueObjects;
 
 namespace Application.ExpenseReports;
 
@@ -12,4 +14,15 @@ public interface IExpenseReportStore
     Task<PagedResult<ExpenseReportSummary>> ListAsync(PageRequest request, CancellationToken cancellationToken);
 
     Task<ExpenseReportDetails?> GetDetailsAsync(Guid id, CancellationToken cancellationToken);
+
+    Task<bool> ExistsAsync(Guid userId, ReportMonth period, CancellationToken cancellationToken);
+
+    void Add(ExpenseReport report);
+
+    /// <summary>
+    /// Saves every change of the request, whatever store made it (they share one DbContext). Throws
+    /// <see cref="Domain.Exceptions.DuplicateExpenseReportException" /> when a concurrent request created the same
+    /// user's report for the same month first.
+    /// </summary>
+    Task SaveChangesAsync(CancellationToken cancellationToken);
 }

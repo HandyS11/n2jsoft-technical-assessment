@@ -26,7 +26,7 @@ public sealed class UserCommandSteps(ApiDriver api, KnownUsers knownUsers)
     [When(@"^I create a user whose (\S+) is (.+)$")]
     public Task WhenICreateAUserWhoseFieldIsAsync(string field, string json)
     {
-        return CreateAsync(With(ValidRequest(), field, json));
+        return CreateAsync(JsonRequests.With(ValidRequest(), field, json));
     }
 
     [When("I update the user {string} with")]
@@ -39,7 +39,8 @@ public sealed class UserCommandSteps(ApiDriver api, KnownUsers knownUsers)
     [When(@"^I update the user ""([^""]+)"" whose (\S+) is (.+)$")]
     public Task WhenIUpdateTheUserWhoseFieldIsAsync(string name, string field, string json)
     {
-        return api.SendAsync(HttpMethod.Put, PathOf(knownUsers.IdOf(name)), With(ValidRequest(), field, json));
+        return api.SendAsync(HttpMethod.Put, PathOf(knownUsers.IdOf(name)),
+            JsonRequests.With(ValidRequest(), field, json));
     }
 
     [When("I update an unknown user")]
@@ -157,15 +158,6 @@ public sealed class UserCommandSteps(ApiDriver api, KnownUsers knownUsers)
             },
             ["monthlyExpenseQuota"] = int.Parse(row["Monthly quota"], CultureInfo.InvariantCulture),
         };
-    }
-
-    /// <summary>Replaces the field at <paramref name="path" /> ("address.city") with the parsed JSON value.</summary>
-    private static JsonObject With(JsonObject request, string path, string json)
-    {
-        var segments = path.Split('.');
-        var parent = segments[..^1].Aggregate(request, (node, segment) => node[segment]!.AsObject());
-        parent[segments[^1]] = JsonNode.Parse(json);
-        return request;
     }
 
     private async Task CreateAsync(JsonObject request)

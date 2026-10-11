@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using Application.Exceptions;
 using Application.ExpenseReports;
+using Application.ExpenseReports.Commands;
 using Application.Paging;
 using Microsoft.AspNetCore.Http.HttpResults;
+using WebApi.Endpoints.Requests;
 
 namespace WebApi.Endpoints;
 
@@ -18,6 +20,11 @@ internal static class ExpenseReportEndpoints
             .ProducesValidationProblem();
         reports.MapGet("/{id:guid}", GetExpenseReportAsync)
             .ProducesProblem(StatusCodes.Status404NotFound);
+        // 404: the user is unknown or deleted. 422: the user is inactive, or already has a report for that month.
+        reports.MapPost("/", CreateExpenseReportAsync)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         return endpoints;
     }
@@ -41,5 +48,14 @@ internal static class ExpenseReportEndpoints
         var report = await expenseReportStore.GetDetailsAsync(id, cancellationToken).ConfigureAwait(false)
                      ?? throw new NotFoundException("ExpenseReport", id);
         return TypedResults.Ok(report);
+    }
+
+    private static async Task<Created<ExpenseReportDetails>> CreateExpenseReportAsync(
+        CreateExpenseReportRequest request,
+        CreateExpenseReportHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var report = await handler.HandleAsync(request.ToCommand(), cancellationToken).ConfigureAwait(false);
+        return TypedResults.Created(new Uri($"/v1/expense-reports/{report.Id}", UriKind.Relative), report);
     }
 }

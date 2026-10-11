@@ -1,8 +1,11 @@
 using Application.ExpenseReports;
 using Application.Paging;
 using Domain.Entities;
+using Domain.Exceptions;
+using Domain.ValueObjects;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Infrastructure.ExpenseReports;
 
@@ -37,5 +40,39 @@ internal sealed class ExpenseReportStore(AppDbContext dbContext) : IExpenseRepor
             .Select(report => new ExpenseReportDetails(report.Id, report.Title, report.UserId, report.Year,
                 report.Month))
             .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public Task<bool> ExistsAsync(Guid userId, ReportMonth period, CancellationToken cancellationToken)
+    {
+        return dbContext.Set<ExpenseReport>().AnyAsync(
+            report => report.UserId == userId && report.Year == period.Year && report.Month == period.Month,
+            cancellationToken);
+    }
+
+    public void Add(ExpenseReport report)
+    {
+        dbContext.Set<ExpenseReport>().Add(report);
+    }
+
+    public async Task SaveChangesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException exception) when (IsDuplicateReport(exception))
+        {
+            // Another request created the same report between ExistsAsync and this save.
+            throw new DuplicateExpenseReportException(exception);
+        }
+    }
+
+    private static bool IsDuplicateReport(DbUpdateException exception)
+    {
+        return exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: ExpenseReportEntityTypeConfiguration.UserAndMonthIndexName,
+        };
     }
 }
