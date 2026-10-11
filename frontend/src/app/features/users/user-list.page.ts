@@ -1,17 +1,10 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { catchError, EMPTY, Observable, Subject, switchMap } from 'rxjs';
-import { PagedResult } from '../../core/paged-result';
+import { pagedList } from '../../core/paged-list';
 import { UserSummary } from './user-summary';
 import { UsersApi } from './users.api';
 
 const pageSize = 20;
-
-/** At least 1: an empty list still shows as page 1 of 1. */
-function pageCountOf(page: PagedResult<unknown>): number {
-  return Math.max(1, Math.ceil(page.totalCount / page.pageSize));
-}
 
 @Component({
   selector: 'app-user-list-page',
@@ -21,13 +14,13 @@ function pageCountOf(page: PagedResult<unknown>): number {
       <h1 class="text-2xl font-semibold">Utilisateurs</h1>
       <a routerLink="/users/new" class="underline">Nouvel utilisateur</a>
     </div>
-    @if (failed()) {
+    @if (list.failed()) {
       <p role="alert">Impossible de charger les utilisateurs.</p>
     }
-    @if (actionFailed()) {
+    @if (list.actionFailed()) {
       <p role="alert">L'opération a échoué. Veuillez réessayer.</p>
     }
-    @if (page(); as page) {
+    @if (list.page(); as page) {
       @if (page.items.length > 0) {
         <table class="w-full text-left">
           <thead>
@@ -48,24 +41,24 @@ function pageCountOf(page: PagedResult<unknown>): number {
                 <td>{{ user.isActive ? 'Actif' : 'Inactif' }}</td>
                 <td class="flex gap-3">
                   <a [routerLink]="['/users', user.id, 'edit']" class="underline">Modifier</a>
-                  <button type="button" [disabled]="busy()" (click)="toggle(user)">
+                  <button type="button" [disabled]="list.busy()" (click)="toggle(user)">
                     {{ user.isActive ? 'Désactiver' : 'Activer' }}
                   </button>
-                  <button type="button" [disabled]="busy()" (click)="remove(user)">Supprimer</button>
+                  <button type="button" [disabled]="list.busy()" (click)="remove(user)">Supprimer</button>
                 </td>
               </tr>
             }
           </tbody>
         </table>
         <nav aria-label="Pagination" class="mt-4 flex items-center gap-4">
-          <button type="button" [disabled]="busy() || page.page <= 1" (click)="load(page.page - 1)">
+          <button type="button" [disabled]="list.busy() || page.page <= 1" (click)="list.load(page.page - 1)">
             Précédent
           </button>
-          <span>Page {{ page.page }} sur {{ pageCount() }}</span>
+          <span>Page {{ page.page }} sur {{ list.pageCount() }}</span>
           <button
             type="button"
-            [disabled]="busy() || page.page >= pageCount()"
-            (click)="load(page.page + 1)"
+            [disabled]="list.busy() || page.page >= list.pageCount()"
+            (click)="list.load(page.page + 1)"
           >
             Suivant
           </button>
@@ -73,81 +66,22 @@ function pageCountOf(page: PagedResult<unknown>): number {
       } @else {
         <p>Aucun utilisateur.</p>
       }
-    } @else if (!failed()) {
+    } @else if (!list.failed()) {
       <p>Chargement…</p>
     }
   `,
 })
 export default class UserListPage {
   private readonly api = inject(UsersApi);
-  protected readonly page = signal<PagedResult<UserSummary> | undefined>(undefined);
-  protected readonly failed = signal(false);
-  protected readonly actionFailed = signal(false);
-  /** An action runs, until the page reloaded after it shows: a second click would act on a stale row. */
-  protected readonly busy = signal(false);
-  protected readonly pageCount = computed(() => {
-    const page = this.page();
-    return page ? pageCountOf(page) : 1;
-  });
-
-  private readonly pageRequests = new Subject<number>();
-
-  constructor() {
-    this.pageRequests
-      .pipe(
-        // Only the latest request counts: an answer arriving late must not replace the page asked for since.
-        switchMap((pageNumber) =>
-          this.api.list(pageNumber, pageSize).pipe(
-            catchError(() => {
-              this.failed.set(true);
-              this.busy.set(false);
-              return EMPTY;
-            })
-          )
-        ),
-        takeUntilDestroyed()
-      )
-      .subscribe((page) => this.show(page));
-    this.load(1);
-  }
-
-  protected load(pageNumber: number): void {
-    this.pageRequests.next(pageNumber);
-  }
-
-  private show(page: PagedResult<UserSummary>): void {
-    // Users were deleted past the page shown: show the last page left rather than an empty one. Always an earlier
-    // page, so this ends even if more users go meanwhile.
-    const lastPage = pageCountOf(page);
-    if (page.items.length === 0 && page.page > lastPage) {
-      this.load(lastPage);
-      return;
-    }
-    this.page.set(page);
-    this.failed.set(false);
-    this.busy.set(false);
-  }
+  protected readonly list = pagedList((page) => this.api.list(page, pageSize));
 
   protected toggle(user: UserSummary): void {
-    this.run(user.isActive ? this.api.deactivate(user.id) : this.api.activate(user.id));
+    this.list.run(user.isActive ? this.api.deactivate(user.id) : this.api.activate(user.id));
   }
 
   protected remove(user: UserSummary): void {
     if (window.confirm(`Supprimer l'utilisateur ${user.name} ?`)) {
-      this.run(this.api.delete(user.id));
+      this.list.run(this.api.delete(user.id));
     }
-  }
-
-  private run(action: Observable<void>): void {
-    this.busy.set(true);
-    this.actionFailed.set(false);
-    action.subscribe({
-      next: () => this.load(this.page()?.page ?? 1),
-      error: () => {
-        // The user may be gone (deleted in another tab): reload so a stale row does not stay.
-        this.actionFailed.set(true);
-        this.load(this.page()?.page ?? 1);
-      },
-    });
   }
 }

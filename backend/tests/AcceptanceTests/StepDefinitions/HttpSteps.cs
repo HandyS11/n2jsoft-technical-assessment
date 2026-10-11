@@ -34,4 +34,14 @@ public sealed class HttpSteps(ApiDriver api)
         var problem = await api.Response.Content.ReadFromJsonAsync<JsonElement>();
         problem.GetProperty("status").GetInt32().ShouldBe(status);
     }
+
+    [Then("the response is a business rule violation with the code {string}")]
+    public async Task ThenTheResponseIsABusinessRuleViolationWithTheCodeAsync(string code)
+    {
+        ((int)api.Response.StatusCode).ShouldBe(422);
+        api.Response.Content.Headers.ContentType.ShouldNotBeNull().MediaType.ShouldBe("application/problem+json");
+        // The buffered string can be read again by a later step; the stream cannot.
+        using var problem = JsonDocument.Parse(await api.Response.Content.ReadAsStringAsync());
+        problem.RootElement.GetProperty("code").GetString().ShouldBe(code);
+    }
 }

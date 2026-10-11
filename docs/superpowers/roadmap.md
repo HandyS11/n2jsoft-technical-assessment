@@ -18,7 +18,7 @@ done, then brainstorms only what is new.
 |---|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|------------|-------------|--------------------------------------------------------------|
 | 1 | Foundation      | Clean Architecture restructure, API versioning, OpenAPI + Scalar, error contract, Redis removal, 3 backend test tiers, frontend shell, CI split | —          | Done        | [foundation](specs/2026-10-10-foundation-design.md), [plan](plans/2026-10-10-foundation.md) |
 | 2 | Users           | Full user model (address, active flag, monthly expense quota, soft delete), CRUD API, users management UI                                       | 1          | Done        | [users](specs/2026-10-11-users-design.md), [plan](plans/2026-10-11-users.md) |
-| 3 | Expense Reports | Report entity, generated title "Prénom Nom - Mois Année", create from user + month (active users only), physical delete, reports list page       | 2          | Not started | —                                                            |
+| 3 | Expense Reports | Report entity, generated title "Prénom Nom - Mois Année", create from user + month (active users only), physical delete, reports list page       | 2          | Done        | [expense reports](specs/2026-10-11-expense-reports-design.md), [plan](plans/2026-10-11-expense-reports.md) |
 | 4 | Expenses        | Expense entity and validation, monthly quota rule, edit, soft delete, report page with add form and expenses in pages of 5                     | 3          | Not started | —                                                            |
 | 5 | Wrap-up         | Final "Mes Notes", polish, private GitHub repo + invite `n2jsoft-hr-cr`                                                                            | 4          | Not started | —                                                            |
 
@@ -40,6 +40,10 @@ These are decided in the Foundation spec; slices follow them unless their own sp
   `NotFoundException` → `404`; `BusinessRuleViolationException` → `422` with a stable `code` extension
   (e.g. `expense.quota_exceeded`). Unknown routes and unsupported versions answer a `404` ProblemDetails.
   The UI maps `code` to its French message.
+- **Business rules:** codes are `<feature>.<rule>` (`expense_report.already_exists`). A rule that a concurrent
+  request can break between the check and the save (uniqueness) is also enforced by a database constraint, which
+  the store maps to the same exception; its race is tested at the store level (two DI scopes, both read, then both
+  save). The UI reads the code with `businessRuleCode` (`core/problem-details.ts`) and maps it to French.
 - **API:** URL-segment versioning, all endpoints under `/v1/...`; the Angular app calls `/api/v1/...`
   through the dev proxy. Lists are paged: `?page=&pageSize=` (1-based, default 20, at most 100) returning
   `PagedResult<T>` (`items`, `page`, `pageSize`, `totalCount`).
@@ -66,10 +70,7 @@ Settled in the [Users spec](specs/2026-10-11-users-design.md#decisions).
 
 ### Expense Reports
 
-- One report per user per month (uniqueness)?
-- The title is not editable: store a snapshot at creation, or compute it from the user's current name?
-- French month capitalisation in the title ("Octobre 2025").
-- Physical delete of a report that holds expenses: cascade, block, or detach?
+Settled in the [Expense Reports spec](specs/2026-10-11-expense-reports-design.md#decisions).
 
 ### Expenses
 

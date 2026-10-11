@@ -28,4 +28,15 @@ public sealed class ApiDocumentationSteps(ApiDriver api)
         var responses = document.GetProperty("paths").GetProperty(path).GetProperty(method).GetProperty("responses");
         responses.TryGetProperty(status, out _).ShouldBeTrue($"{method} {path} declares no {status} response");
     }
+
+    [Then("the OpenAPI document declares the query parameter {string} for {string} on {string}")]
+    public async Task ThenTheOpenApiDocumentDeclaresTheQueryParameterAsync(string name, string method, string path)
+    {
+        var document = await api.Response.Content.ReadFromJsonAsync<JsonElement>();
+        var parameters = document.GetProperty("paths").GetProperty(path).GetProperty(method).GetProperty("parameters");
+        parameters.EnumerateArray()
+            .ShouldContain(parameter => parameter.GetProperty("name").GetString() == name &&
+                                        parameter.GetProperty("in").GetString() == "query",
+                $"{method} {path} declares no query parameter {name}");
+    }
 }

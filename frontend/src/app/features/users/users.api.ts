@@ -1,20 +1,31 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { EMPTY, expand, mergeMap, Observable, toArray } from 'rxjs';
+import { CursorPage } from '../../core/cursor-page';
 import { PagedResult } from '../../core/paged-result';
 import { SaveUser, UserDetails } from './user-details';
 import { UserSummary } from './user-summary';
 
 const usersUrl = '/api/v1/users';
+/** The API's PageRequest.MaxPageSize: the fewest requests to read every active user. */
+const largestPageSize = 100;
 
 @Injectable({ providedIn: 'root' })
 export class UsersApi {
   private readonly http = inject(HttpClient);
 
   list(page: number, pageSize: number): Observable<PagedResult<UserSummary>> {
-    return this.http.get<PagedResult<UserSummary>>(usersUrl, {
-      params: { page, pageSize },
-    });
+    return this.http.get<PagedResult<UserSummary>>(usersUrl, { params: { page, pageSize } });
+  }
+
+  /** Every active user, in the API's order (last name, then first name), read 100 at a time. */
+  listAllActive(): Observable<UserSummary[]> {
+    return this.listActive().pipe(
+      // Each slice starts after the last user read: users changing meanwhile cannot make it skip or repeat others.
+      expand((slice) => (slice.next === null ? EMPTY : this.listActive(slice.next))),
+      mergeMap((slice) => slice.items),
+      toArray()
+    );
   }
 
   get(id: string): Observable<UserDetails> {
@@ -42,5 +53,10 @@ export class UsersApi {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${usersUrl}/${id}`);
+  }
+
+  private listActive(after?: string): Observable<CursorPage<UserSummary>> {
+    const params = after === undefined ? { pageSize: largestPageSize } : { pageSize: largestPageSize, after };
+    return this.http.get<CursorPage<UserSummary>>(`${usersUrl}/active`, { params });
   }
 }

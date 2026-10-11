@@ -1,3 +1,4 @@
+using Application.ExpenseReports.Commands;
 using Application.Users.Commands;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,6 +13,8 @@ public static class DependencyInjectionExtensions
         services.AddScoped<UpdateUserHandler>();
         services.AddScoped<SetUserActivationHandler>();
         services.AddScoped<DeleteUserHandler>();
+        services.AddScoped<CreateExpenseReportHandler>();
+        services.AddScoped<DeleteExpenseReportHandler>();
         return services;
     }
 }
