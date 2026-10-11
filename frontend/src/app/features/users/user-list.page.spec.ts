@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, of, Subject, throwError } from 'rxjs';
 import { PagedResult } from '../../core/paged-result';
 import UserListPage from './user-list.page';
 import { UserSummary } from './user-summary';
@@ -51,6 +51,7 @@ function render(api: ReturnType<typeof fakeApi>) {
 
   return {
     element,
+    detectChanges: () => fixture.detectChanges(),
     rows: () =>
       Array.from(element.querySelectorAll('tbody tr')).map((row) =>
         Array.from(row.querySelectorAll('td'))
@@ -207,6 +208,23 @@ describe('UserListPage', () => {
 
     expect(page.rows()).toEqual([['Marc Assin', 'Lyon', '5', 'Inactif']]);
     expect(page.element.textContent).toContain('Page 1 sur 1');
+  });
+
+  it('ignores an answer arriving after a later request', () => {
+    const pageTwo = new Subject<PagedResult<UserSummary>>();
+    const api = fakeApi((page) =>
+      page === 1 ? of(pageOf([juste], 1, 45)) : pageTwo
+    );
+    const page = render(api);
+    page.click('Suivant');
+    // Page 2 is still loading when the action reloads page 1, which answers at once.
+    page.click('Désactiver', 0);
+
+    pageTwo.next(pageOf([marc], 2, 45));
+    page.detectChanges();
+
+    expect(page.rows()).toEqual([['Juste Leblanc', 'Paris', '10', 'Actif']]);
+    expect(page.element.textContent).toContain('Page 1 sur 3');
   });
 
   it('says so when an action fails', () => {

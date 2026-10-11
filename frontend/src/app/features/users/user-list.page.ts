@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { Observable } from 'rxjs';
+import { catchError, EMPTY, Observable, Subject, switchMap } from 'rxjs';
 import { PagedResult } from '../../core/paged-result';
 import { UserSummary } from './user-summary';
 import { UsersApi } from './users.api';
@@ -78,23 +79,38 @@ export default class UserListPage {
     return page ? Math.max(1, Math.ceil(page.totalCount / page.pageSize)) : 1;
   });
 
+  private readonly pageRequests = new Subject<number>();
+
   constructor() {
+    this.pageRequests
+      .pipe(
+        // Only the latest request counts: an answer arriving late must not replace the page asked for since.
+        switchMap((pageNumber) =>
+          this.api.list(pageNumber, pageSize).pipe(
+            catchError(() => {
+              this.failed.set(true);
+              return EMPTY;
+            })
+          )
+        ),
+        takeUntilDestroyed()
+      )
+      .subscribe((page) => this.show(page));
     this.load(1);
   }
 
   protected load(pageNumber: number): void {
-    this.api.list(pageNumber, pageSize).subscribe({
-      next: (page) => {
-        // The last user of the last page is gone: show the page before rather than an empty one.
-        if (page.items.length === 0 && page.page > 1) {
-          this.load(page.page - 1);
-          return;
-        }
-        this.page.set(page);
-        this.failed.set(false);
-      },
-      error: () => this.failed.set(true),
-    });
+    this.pageRequests.next(pageNumber);
+  }
+
+  private show(page: PagedResult<UserSummary>): void {
+    // The last user of the last page is gone: show the page before rather than an empty one.
+    if (page.items.length === 0 && page.page > 1) {
+      this.load(page.page - 1);
+      return;
+    }
+    this.page.set(page);
+    this.failed.set(false);
   }
 
   protected toggle(user: UserSummary): void {
