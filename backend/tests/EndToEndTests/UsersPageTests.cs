@@ -15,7 +15,7 @@ public sealed class UsersPageTests(AppFixture fixture) : PageTest(fixture)
         {
             Name = "Utilisateurs"
         })).ToBeVisibleAsync();
-        var users = Page.GetByRole(AriaRole.Listitem);
+        var users = Page.GetByRole(AriaRole.Row);
         await Assertions.Expect(users.Filter(new()
         {
             HasText = "Juste Leblanc"
