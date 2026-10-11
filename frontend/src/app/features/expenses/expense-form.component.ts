@@ -24,7 +24,7 @@ const minAmount = 0.01;
 const maxAmount = 999_999.99;
 const storeNameMaxLength = 100;
 /** A positive number with at most two decimals, as the API stores it. */
-const amountPattern = /^[0-9]+(\.[0-9]{1,2})?$/;
+const amountPattern = /^\d+(\.\d{1,2})?$/;
 
 const ruleMessages = new Map<string, string>([
   [
@@ -148,7 +148,7 @@ export class ExpenseFormComponent {
     if (control.value === '') {
       return null;
     }
-    const isDate = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(control.value);
+    const isDate = /^\d{4}-\d{2}-\d{2}$/.test(control.value);
     return isDate && control.value.startsWith(`${this.monthPrefix()}-`) ? null : { outsideMonth: true };
   };
 

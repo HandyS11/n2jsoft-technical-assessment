@@ -58,43 +58,18 @@ describe('appRoutes', () => {
     expect(TestBed.inject(Router).url).toBe('/expense-reports');
   });
 
-  it('opens the users page at /users', async () => {
+  it.each([
+    ['the users page', '/users', 'Utilisateurs'],
+    ['the creation form', '/users/new', 'Nouvel utilisateur'],
+    ['the edit form', '/users/1/edit', "Modifier l'utilisateur"],
+    ['a report', '/expense-reports/1', 'Juste Leblanc - Octobre 2025'],
+  ])('opens %s at %s', async (_page, url, heading) => {
     const harness = await RouterTestingHarness.create();
 
-    await harness.navigateByUrl('/users');
+    await harness.navigateByUrl(url);
 
     expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(
-      'Utilisateurs'
-    );
-  });
-
-  it('opens the creation form at /users/new', async () => {
-    const harness = await RouterTestingHarness.create();
-
-    await harness.navigateByUrl('/users/new');
-
-    expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(
-      'Nouvel utilisateur'
-    );
-  });
-
-  it('opens the edit form at /users/:id/edit', async () => {
-    const harness = await RouterTestingHarness.create();
-
-    await harness.navigateByUrl('/users/1/edit');
-
-    expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(
-      "Modifier l'utilisateur"
-    );
-  });
-
-  it('opens a report at /expense-reports/:id', async () => {
-    const harness = await RouterTestingHarness.create();
-
-    await harness.navigateByUrl('/expense-reports/1');
-
-    expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(
-      'Juste Leblanc - Octobre 2025'
+      heading
     );
   });
 });

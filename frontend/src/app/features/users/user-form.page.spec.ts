@@ -248,6 +248,15 @@ describe('UserFormPage', () => {
     expect(page.element().querySelector('form')).toBeNull();
   });
 
+  it('says so when the user to edit cannot be loaded', async () => {
+    const api = fakeApi();
+    api.get.mockImplementation(() => httpError(500));
+    const page = await render(api, '/users/1/edit');
+
+    expect(page.alert()).toBe("Impossible de charger l'utilisateur.");
+    expect(page.element().querySelector('form')).toBeNull();
+  });
+
   it.each([409, 412])(
     'says so when the user was changed meanwhile (%i)',
     async (status) => {
@@ -272,5 +281,16 @@ describe('UserFormPage', () => {
     await page.submit();
 
     expect(page.alert()).toBe('Utilisateur introuvable.');
+  });
+
+  it('says so when saving fails for another reason', async () => {
+    const api = fakeApi();
+    api.update.mockImplementation(() => httpError(500));
+    const page = await render(api, '/users/1/edit');
+
+    await page.submit();
+
+    expect(page.alert()).toBe("L'enregistrement a échoué. Veuillez réessayer.");
+    expect(TestBed.inject(Router).url).toBe('/users/1/edit');
   });
 });

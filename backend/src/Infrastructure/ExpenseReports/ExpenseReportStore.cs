@@ -105,7 +105,8 @@ internal sealed class ExpenseReportStore(AppDbContext dbContext) : IExpenseRepor
                 .GroupBy(expense => expense.ExpenseReportId)
                 .Select(sameReport => new
                 {
-                    Count = (int?)sameReport.Count(), Total = (decimal?)sameReport.Sum(expense => expense.Amount)
+                    Count = (int?)sameReport.Count(),
+                    Total = (decimal?)sameReport.Sum(decimal (Expense expense) => expense.Amount)
                 })
                 // A report without expenses has no group: its count and total are 0.
                 .DefaultIfEmpty()
