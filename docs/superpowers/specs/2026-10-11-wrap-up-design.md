@@ -1,6 +1,7 @@
 # Wrap-up — design
 
-Slice 5 of the [roadmap](../roadmap.md). Status: approved design; the implementation plan follows.
+Slice 5 of the [roadmap](../roadmap.md). Status: approved design; see the
+[implementation plan](../plans/2026-10-11-wrap-up.md).
 Builds on the [Foundation](2026-10-10-foundation-design.md), [Users](2026-10-11-users-design.md),
 [Expense Reports](2026-10-11-expense-reports-design.md) and [Expenses](2026-10-11-expenses-design.md) designs, whose
 conventions apply unless stated otherwise here.

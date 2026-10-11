@@ -20,7 +20,7 @@ done, then brainstorms only what is new.
 | 2 | Users           | Full user model (address, active flag, monthly expense quota, soft delete), CRUD API, users management UI                                       | 1          | Done        | [users](specs/2026-10-11-users-design.md), [plan](plans/2026-10-11-users.md) |
 | 3 | Expense Reports | Report entity, generated title "Prénom Nom - Mois Année", create from user + month (active users only), physical delete, reports list page       | 2          | Done        | [expense reports](specs/2026-10-11-expense-reports-design.md), [plan](plans/2026-10-11-expense-reports.md) |
 | 4 | Expenses        | Expense entity and validation, monthly quota rule, edit, soft delete, report page with add form and expenses in pages of 5                     | 3          | Done        | [expenses](specs/2026-10-11-expenses-design.md), [plan](plans/2026-10-11-expenses.md) |
-| 5 | Wrap-up         | Final "Mes Notes", polish, private GitHub repo + invite `n2jsoft-hr-cr`                                                                            | 4          | Not started | —                                                            |
+| 5 | Wrap-up         | OpenTelemetry for the webapi, shared pagination component, `prestart` removal, fresh-clone run, final "Mes Notes" with a traceability table; private GitHub repo + invite `n2jsoft-hr-cr` | 4 | Done | [wrap-up](specs/2026-10-11-wrap-up-design.md), [plan](plans/2026-10-11-wrap-up.md) |
 
 ## Conventions every slice inherits
 
@@ -51,6 +51,8 @@ These are decided in the Foundation spec; slices follow them unless their own sp
 - **API:** URL-segment versioning, all endpoints under `/v1/...`; the Angular app calls `/api/v1/...`
   through the dev proxy. Lists are paged: `?page=&pageSize=` (1-based, default 20, at most 100) returning
   `PagedResult<T>` (`items`, `page`, `pageSize`, `totalCount`).
+- **Telemetry:** configured in `WebApi` only (`AddTelemetry()`); exported over OTLP only when
+  `OTEL_EXPORTER_OTLP_ENDPOINT` is set (Aspire sets it). Domain and Application never reference OpenTelemetry.
 - **Tests:** xUnit v3 on Microsoft.Testing.Platform, Shouldly, NSubstitute.
   - *Unit* — Domain + command handlers.
   - *Acceptance* — Reqnroll (Gherkin in **English**) + Testcontainers Postgres + `WebApplicationFactory`.
@@ -61,7 +63,8 @@ These are decided in the Foundation spec; slices follow them unless their own sp
     present.
   - *Frontend* — Vitest specs per page and API service.
 - **Frontend:** feature folders under `src/app/features/<feature>/`, standalone components with
-  signals, UI text in French, `fr-FR` locale, Playwright locators by role/text (no `data-testid`).
+  signals, lists paged through `pagedList` and `<app-pagination>`, UI text in French, `fr-FR` locale, Playwright
+  locators by role/text (no `data-testid`).
 - **Delivery:** small conventional commits, no AI attribution in commits or PRs, "Mes Notes" in French.
 
 ## Open questions per slice
@@ -79,3 +82,7 @@ Settled in the [Expense Reports spec](specs/2026-10-11-expense-reports-design.md
 ### Expenses
 
 Settled in the [Expenses spec](specs/2026-10-11-expenses-design.md#decisions).
+
+### Wrap-up
+
+Settled in the [Wrap-up spec](specs/2026-10-11-wrap-up-design.md#decisions).
