@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -19,8 +20,6 @@ public static class TestEnvironment
     private static ApiFactory? _factory;
     private static Respawner? _respawner;
     private static WebApplicationFactory<Program>? _developmentFactory;
-    private static WebApplicationFactory<Program>? _telemetryFactory;
-    private static WebApplicationFactory<Program>? _unreachableCollectorFactory;
 
     public static WebApplicationFactory<Program> Factory =>
         _factory ?? throw new InvalidOperationException("The test environment is not started.");
@@ -32,32 +31,34 @@ public static class TestEnvironment
     public static WebApplicationFactory<Program> DevelopmentFactory =>
         _developmentFactory ??= Factory.WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
 
-    /// <summary>The spans exported by <see cref="TelemetryFactory" />, for the telemetry scenarios.</summary>
-    public static RecordedSpans RecordedSpans { get; } = [];
-
-    /// <summary>
-    /// Built on first use: only the telemetry scenarios need it. Adds an in-memory exporter to the tracing the API sets
-    /// up itself, so its instrumentation and filters apply as they do under Aspire.
-    /// </summary>
-    public static WebApplicationFactory<Program> TelemetryFactory =>
-        _telemetryFactory ??= Factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
-            services.AddOpenTelemetry().WithTracing(tracing => tracing.AddInMemoryExporter(RecordedSpans))));
-
-    /// <summary>The export failures the OTLP exporter reports, for the unreachable-collector scenario.</summary>
-    public static OtlpExportFailures OtlpExportFailures { get; } = new();
-
-    /// <summary>
-    /// Built on first use: exports over OTLP, as under Aspire, to a port nothing listens on (the dashboard stopped).
-    /// Traces and logs are exported every 100 ms rather than every 5 s, so a scenario sees an export fail.
-    /// </summary>
-    public static WebApplicationFactory<Program> UnreachableCollectorFactory =>
-        _unreachableCollectorFactory ??= Factory.WithWebHostBuilder(builder => builder
-            .UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:9")
-            .UseSetting("OTEL_BSP_SCHEDULE_DELAY", "100")
-            .UseSetting("OTEL_BLRP_SCHEDULE_DELAY", "100"));
-
     private static string ConnectionString =>
         _postgres?.GetConnectionString() ?? throw new InvalidOperationException("Postgres is not started.");
+
+    /// <summary>
+    /// Adds an in-memory exporter to the tracing the API sets up itself, so its instrumentation and filters apply as
+    /// they do under Aspire. For one scenario: dispose it at its end. A tracer provider listens to every host in the
+    /// process, so a factory left running would go on recording the spans of the scenarios after it.
+    /// </summary>
+    public static WebApplicationFactory<Program> CreateTelemetryRecordingFactory(ICollection<Activity> spans)
+    {
+        return Factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.AddOpenTelemetry().WithTracing(tracing => tracing.AddInMemoryExporter(spans))));
+    }
+
+    /// <summary>
+    /// Exports over OTLP, as under Aspire, to a port nothing listens on (the dashboard stopped). Traces and logs are
+    /// exported every 100 ms rather than every 5 s, and a request gives up after 1 s rather than 10 s, so a scenario
+    /// soon sees an export fail. For one scenario, like <see cref="CreateTelemetryRecordingFactory" />: left running,
+    /// it would go on exporting the telemetry of the scenarios after it.
+    /// </summary>
+    public static WebApplicationFactory<Program> CreateUnreachableCollectorFactory()
+    {
+        return Factory.WithWebHostBuilder(builder => builder
+            .UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:9")
+            .UseSetting("OTEL_EXPORTER_OTLP_TIMEOUT", "1000")
+            .UseSetting("OTEL_BSP_SCHEDULE_DELAY", "100")
+            .UseSetting("OTEL_BLRP_SCHEDULE_DELAY", "100"));
+    }
 
     public static async Task StartAsync()
     {
@@ -98,18 +99,6 @@ public static class TestEnvironment
 
     public static async Task StopAsync()
     {
-        if (_unreachableCollectorFactory is not null)
-        {
-            await _unreachableCollectorFactory.DisposeAsync();
-        }
-
-        OtlpExportFailures.Dispose();
-
-        if (_telemetryFactory is not null)
-        {
-            await _telemetryFactory.DisposeAsync();
-        }
-
         if (_developmentFactory is not null)
         {
             await _developmentFactory.DisposeAsync();
