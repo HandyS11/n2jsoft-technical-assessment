@@ -39,6 +39,12 @@ public sealed record ReportMonth
     /// <summary>1 for January to 12 for December.</summary>
     public int Month { get; }
 
+    /// <summary>Whether <paramref name="date" /> falls within this month.</summary>
+    public bool Contains(DateOnly date)
+    {
+        return date.Year == Year && date.Month == Month;
+    }
+
     /// <summary>The French label used in report titles: "Octobre 2025".</summary>
     public override string ToString()
     {

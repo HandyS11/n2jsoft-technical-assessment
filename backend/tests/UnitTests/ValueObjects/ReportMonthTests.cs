@@ -61,4 +61,22 @@ public sealed class ReportMonthTests
     {
         new ReportMonth(2025, month).ToString().ShouldBe(expected);
     }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(15)]
+    [InlineData(31)]
+    public void Contains_every_day_of_its_month(int day)
+    {
+        new ReportMonth(2025, 10).Contains(new DateOnly(2025, 10, day)).ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData(2025, 9, 30)]
+    [InlineData(2025, 11, 1)]
+    [InlineData(2024, 10, 15)]
+    public void Does_not_contain_a_day_of_another_month(int year, int month, int day)
+    {
+        new ReportMonth(2025, 10).Contains(new DateOnly(year, month, day)).ShouldBeFalse();
+    }
 }
