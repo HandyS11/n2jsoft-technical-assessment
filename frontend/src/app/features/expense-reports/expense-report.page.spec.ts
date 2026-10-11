@@ -74,7 +74,7 @@ describe('ExpenseReportPage', () => {
 
     expect(api.get).toHaveBeenCalledWith('1');
     expect(page.heading()).toBe('Juste Leblanc - Octobre 2025');
-    expect(page.element().textContent).toContain('Mois : octobre 2025');
+    expect(page.element().textContent).toContain('Mois : Octobre 2025');
   });
 
   it('links back to the list', async () => {

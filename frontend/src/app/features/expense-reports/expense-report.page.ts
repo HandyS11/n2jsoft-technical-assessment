@@ -1,6 +1,6 @@
-import { DatePipe } from '@angular/common';
+import { formatDate } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, LOCALE_ID, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { confirmDeletion } from './confirm-deletion';
 import { ExpenseReportDetails } from './expense-report-details';
@@ -12,7 +12,7 @@ function isNotFound(error: unknown): boolean {
 
 @Component({
   selector: 'app-expense-report-page',
-  imports: [DatePipe, RouterLink],
+  imports: [RouterLink],
   template: `
     <a routerLink="/expense-reports" class="underline">← Notes de frais</a>
     @if (error(); as message) {
@@ -20,7 +20,7 @@ function isNotFound(error: unknown): boolean {
     }
     @if (report(); as report) {
       <h1 class="my-4 text-2xl font-semibold">{{ report.title }}</h1>
-      <p>Mois : {{ firstDay() | date: 'MMMM y' }}</p>
+      <p>Mois : {{ monthLabel() }}</p>
       <button type="button" class="mt-4" [disabled]="deleting()" (click)="remove(report)">Supprimer</button>
     } @else if (!error()) {
       <p>Chargement…</p>
@@ -34,10 +34,16 @@ export default class ExpenseReportPage {
   protected readonly report = signal<ExpenseReportDetails | undefined>(undefined);
   protected readonly error = signal<string | null>(null);
   protected readonly deleting = signal(false);
-  /** The DatePipe formats a date: the first day of the report's month, in local time. */
-  protected readonly firstDay = computed(() => {
+  private readonly locale = inject(LOCALE_ID);
+  /** "Octobre 2025", capitalised like the month in the title (the locale writes "octobre 2025"). */
+  protected readonly monthLabel = computed(() => {
     const report = this.report();
-    return report ? new Date(report.year, report.month - 1, 1) : null;
+    if (!report) {
+      return '';
+    }
+    // The first day of the report's month, in local time.
+    const label = formatDate(new Date(report.year, report.month - 1, 1), 'MMMM y', this.locale);
+    return label.charAt(0).toUpperCase() + label.slice(1);
   });
 
   constructor() {
