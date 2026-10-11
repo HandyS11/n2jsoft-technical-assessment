@@ -23,4 +23,6 @@ Feature: Telemetry
   Scenario: The API keeps answering when its telemetry cannot be exported
     Given the API exports its telemetry to a collector that does not answer
     When I request "/v1/users"
+    And the API has failed to export its telemetry
+    And I request "/v1/users"
     Then the response status is 200

@@ -43,12 +43,18 @@ public static class TestEnvironment
         _telemetryFactory ??= Factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
             services.AddOpenTelemetry().WithTracing(tracing => tracing.AddInMemoryExporter(RecordedSpans))));
 
+    /// <summary>The export failures the OTLP exporter reports, for the unreachable-collector scenario.</summary>
+    public static OtlpExportFailures OtlpExportFailures { get; } = new();
+
     /// <summary>
     /// Built on first use: exports over OTLP, as under Aspire, to a port nothing listens on (the dashboard stopped).
+    /// Traces and logs are exported every 100 ms rather than every 5 s, so a scenario sees an export fail.
     /// </summary>
     public static WebApplicationFactory<Program> UnreachableCollectorFactory =>
-        _unreachableCollectorFactory ??= Factory.WithWebHostBuilder(builder =>
-            builder.UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:9"));
+        _unreachableCollectorFactory ??= Factory.WithWebHostBuilder(builder => builder
+            .UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:9")
+            .UseSetting("OTEL_BSP_SCHEDULE_DELAY", "100")
+            .UseSetting("OTEL_BLRP_SCHEDULE_DELAY", "100"));
 
     private static string ConnectionString =>
         _postgres?.GetConnectionString() ?? throw new InvalidOperationException("Postgres is not started.");
@@ -96,6 +102,8 @@ public static class TestEnvironment
         {
             await _unreachableCollectorFactory.DisposeAsync();
         }
+
+        OtlpExportFailures.Dispose();
 
         if (_telemetryFactory is not null)
         {

@@ -14,6 +14,9 @@ public sealed class TelemetrySteps(ApiDriver api)
     /// <summary>The server span ends once the response is written, possibly after the client has read it.</summary>
     private static readonly TimeSpan SpanTimeout = TimeSpan.FromSeconds(5);
 
+    /// <summary>Well past the export delay the unreachable-collector factory sets, well short of the SDK's 5 s default.</summary>
+    private static readonly TimeSpan ExportTimeout = TimeSpan.FromSeconds(3);
+
     [Given("the API records its traces")]
     public void GivenTheApiRecordsItsTraces()
     {
@@ -25,6 +28,22 @@ public sealed class TelemetrySteps(ApiDriver api)
     public void GivenTheApiExportsItsTelemetryToACollectorThatDoesNotAnswer()
     {
         api.UseUnreachableCollector();
+    }
+
+    [When("the API has failed to export its telemetry")]
+    public static async Task WhenTheApiHasFailedToExportItsTelemetryAsync()
+    {
+        var failuresBefore = TestEnvironment.OtlpExportFailures.Count;
+        var waited = Stopwatch.StartNew();
+        while (TestEnvironment.OtlpExportFailures.Count == failuresBefore)
+        {
+            if (waited.Elapsed > ExportTimeout)
+            {
+                throw new ShouldAssertException($"The OTLP exporter reported no failure within {ExportTimeout}.");
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(50));
+        }
     }
 
     [Then("the request to {string} is traced as a server span with the status {int}")]
