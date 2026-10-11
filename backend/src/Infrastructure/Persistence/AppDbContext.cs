@@ -14,7 +14,8 @@ internal sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbC
 
     internal static async Task SeedAsync(DbContext context, CancellationToken cancellationToken)
     {
-        if (!await context.Set<User>().AnyAsync(cancellationToken).ConfigureAwait(false))
+        // Soft-deleted users count: otherwise the demo users would be inserted again once all of them are deleted.
+        if (!await context.Set<User>().IgnoreQueryFilters().AnyAsync(cancellationToken).ConfigureAwait(false))
         {
             await context.Set<User>().AddRangeAsync(
                 [
