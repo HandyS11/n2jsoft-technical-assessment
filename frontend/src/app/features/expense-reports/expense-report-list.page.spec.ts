@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, of, Subject, throwError } from 'rxjs';
 import { PagedResult } from '../../core/paged-result';
 import { UserSummary } from '../users/user-summary';
 import { UsersApi } from '../users/users.api';
@@ -18,6 +18,13 @@ const juste: UserSummary = {
   monthlyExpenseQuota: 10,
   isActive: true,
 };
+const marie: UserSummary = {
+  id: 'u2',
+  name: 'Marie Curie',
+  city: 'Lyon',
+  monthlyExpenseQuota: 5,
+  isActive: true,
+};
 const october: ExpenseReportSummary = {
   id: '1',
   title: 'Juste Leblanc - Octobre 2025',
@@ -31,6 +38,13 @@ const september: ExpenseReportSummary = {
   month: 9,
 };
 const monthMessage = 'Indiquez un mois au format AAAA-MM, entre 2000-01 et 2100-12.';
+const inactiveUserMessage = 'Cet utilisateur est inactif : il ne peut pas être affecté à une note de frais.';
+
+function createFails(status: number, code?: string): Observable<never> {
+  return throwError(
+    () => new HttpErrorResponse({ status, error: code === undefined ? null : { status, code } })
+  );
+}
 
 function pageOf(
   items: ExpenseReportSummary[],
@@ -88,6 +102,7 @@ async function render(reportsApi = fakeReportsApi(), usersApi = fakeUsersApi()) 
   return {
     element,
     button,
+    detectChanges: () => harness.detectChanges(),
     text: () => element().textContent ?? '',
     rows: () =>
       Array.from(element().querySelectorAll('tbody tr')).map((row) =>
@@ -107,6 +122,8 @@ async function render(reportsApi = fakeReportsApi(), usersApi = fakeUsersApi()) 
       Array.from(element().querySelectorAll('#userId option')).map((option) =>
         option.textContent?.trim()
       ),
+    chosenUser: () =>
+      (element().querySelector('#userId') as HTMLSelectElement).selectedOptions[0]?.textContent?.trim(),
     month: () => element().querySelector('#month') as HTMLInputElement,
     click: (label: string, rowIndex?: number) => {
       button(label, rowIndex).click();
@@ -340,6 +357,101 @@ describe('ExpenseReportListPage', () => {
       expect(page.alerts()).toContain(message);
       expect(page.button('Créer').disabled).toBe(false);
       expect(TestBed.inject(Router).url).toBe('/expense-reports');
+    });
+
+    it.each([
+      { status: 422, code: 'expense_report.inactive_user' },
+      { status: 404, code: undefined },
+    ])('reloads the active users when the API answers $status $code', async ({ status, code }) => {
+      const reportsApi = fakeReportsApi();
+      reportsApi.create.mockImplementation(() => createFails(status, code));
+      const usersApi = fakeUsersApi();
+      const page = await render(reportsApi, usersApi);
+      usersApi.listAllActive.mockImplementation(() => of([marie]));
+      page.choose('u1');
+
+      await page.submit();
+
+      expect(usersApi.listAllActive).toHaveBeenCalledTimes(2);
+      expect(page.options()).toEqual(['Choisissez un utilisateur', 'Marie Curie']);
+    });
+
+    it.each([
+      { status: 422, code: 'expense_report.already_exists' },
+      { status: 500, code: undefined },
+    ])('keeps the active users when the API answers $status $code', async ({ status, code }) => {
+      const reportsApi = fakeReportsApi();
+      reportsApi.create.mockImplementation(() => createFails(status, code));
+      const usersApi = fakeUsersApi();
+      const page = await render(reportsApi, usersApi);
+      page.choose('u1');
+
+      await page.submit();
+
+      expect(usersApi.listAllActive).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the users and the error shown while the users reload', async () => {
+      const reportsApi = fakeReportsApi();
+      reportsApi.create.mockImplementation(() => createFails(422, 'expense_report.inactive_user'));
+      const usersApi = fakeUsersApi();
+      const page = await render(reportsApi, usersApi);
+      usersApi.listAllActive.mockImplementation(() => new Subject<UserSummary[]>());
+      page.choose('u1');
+
+      await page.submit();
+
+      expect(page.options()).toEqual(['Choisissez un utilisateur', 'Juste Leblanc']);
+      expect(page.alerts()).toContain(inactiveUserMessage);
+    });
+
+    it('clears the chosen user once the reloaded users no longer include them', async () => {
+      const reportsApi = fakeReportsApi();
+      reportsApi.create.mockImplementation(() => createFails(422, 'expense_report.inactive_user'));
+      const usersApi = fakeUsersApi(() => of([juste, marie]));
+      const page = await render(reportsApi, usersApi);
+      usersApi.listAllActive.mockImplementation(() => of([marie]));
+      page.choose('u1');
+
+      await page.submit();
+
+      expect(page.chosenUser()).toBe('Choisissez un utilisateur');
+      expect(page.alerts()).toContain(inactiveUserMessage);
+      await page.submit();
+      expect(reportsApi.create).toHaveBeenCalledTimes(1);
+      expect(page.errors()).toEqual(['Choisissez un utilisateur.']);
+    });
+
+    it('keeps the chosen user when the reloaded users still include them', async () => {
+      const reportsApi = fakeReportsApi();
+      reportsApi.create.mockImplementation(() => createFails(404));
+      const usersApi = fakeUsersApi(() => of([juste, marie]));
+      const page = await render(reportsApi, usersApi);
+      usersApi.listAllActive.mockImplementation(() => of([marie]));
+      page.choose('u2');
+
+      await page.submit();
+
+      expect(page.chosenUser()).toBe('Marie Curie');
+    });
+
+    it('ignores users arriving after a later reload', async () => {
+      const reportsApi = fakeReportsApi();
+      reportsApi.create.mockImplementation(() => createFails(422, 'expense_report.inactive_user'));
+      const usersApi = fakeUsersApi(() => of([juste, marie]));
+      const page = await render(reportsApi, usersApi);
+      const firstReload = new Subject<UserSummary[]>();
+      usersApi.listAllActive.mockImplementationOnce(() => firstReload).mockImplementationOnce(() => of([marie]));
+      page.choose('u1');
+      await page.submit();
+      page.choose('u2');
+      // The first reload is still running when the second failure reloads the users again, which answers at once.
+      await page.submit();
+
+      firstReload.next([juste, marie]);
+      page.detectChanges();
+
+      expect(page.options()).toEqual(['Choisissez un utilisateur', 'Marie Curie']);
     });
   });
 });

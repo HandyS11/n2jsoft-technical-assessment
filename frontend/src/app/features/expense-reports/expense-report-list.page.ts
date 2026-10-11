@@ -1,10 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { catchError, EMPTY, Subject, switchMap } from 'rxjs';
-import { PagedResult, pageCountOf } from '../../core/paged-result';
+import { pagedList } from '../../core/paged-list';
 import { businessRuleCode } from '../../core/problem-details';
 import { UserSummary } from '../users/user-summary';
 import { UsersApi } from '../users/users.api';
@@ -34,16 +34,25 @@ function currentMonth(): string {
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function isNotFound(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && error.status === 404;
+}
+
 function createErrorMessage(error: unknown): string {
   const ruleMessage = ruleMessages.get(businessRuleCode(error) ?? '');
   if (ruleMessage !== undefined) {
     return ruleMessage;
   }
-  if (error instanceof HttpErrorResponse && error.status === 404) {
+  if (isNotFound(error)) {
     // The user was deleted since the active users were loaded.
     return 'Utilisateur introuvable.';
   }
   return "L'opération a échoué. Veuillez réessayer.";
+}
+
+/** The chosen user can no longer get a report (deleted or deactivated since the active users were loaded). */
+function isUnavailableUser(error: unknown): boolean {
+  return isNotFound(error) || businessRuleCode(error) === 'expense_report.inactive_user';
 }
 
 @Component({
@@ -91,13 +100,13 @@ function createErrorMessage(error: unknown): string {
       }
     </section>
 
-    @if (failed()) {
+    @if (list.failed()) {
       <p role="alert">Impossible de charger les notes de frais.</p>
     }
-    @if (actionFailed()) {
+    @if (list.actionFailed()) {
       <p role="alert">L'opération a échoué. Veuillez réessayer.</p>
     }
-    @if (page(); as page) {
+    @if (list.page(); as page) {
       @if (page.items.length > 0) {
         <table class="w-full text-left">
           <thead>
@@ -113,21 +122,21 @@ function createErrorMessage(error: unknown): string {
                   <a [routerLink]="['/expense-reports', report.id]" class="underline">{{ report.title }}</a>
                 </td>
                 <td>
-                  <button type="button" [disabled]="busy()" (click)="remove(report)">Supprimer</button>
+                  <button type="button" [disabled]="list.busy()" (click)="remove(report)">Supprimer</button>
                 </td>
               </tr>
             }
           </tbody>
         </table>
         <nav aria-label="Pagination" class="mt-4 flex items-center gap-4">
-          <button type="button" [disabled]="busy() || page.page <= 1" (click)="load(page.page - 1)">
+          <button type="button" [disabled]="list.busy() || page.page <= 1" (click)="list.load(page.page - 1)">
             Précédent
           </button>
-          <span>Page {{ page.page }} sur {{ pageCount() }}</span>
+          <span>Page {{ page.page }} sur {{ list.pageCount() }}</span>
           <button
             type="button"
-            [disabled]="busy() || page.page >= pageCount()"
-            (click)="load(page.page + 1)"
+            [disabled]="list.busy() || page.page >= list.pageCount()"
+            (click)="list.load(page.page + 1)"
           >
             Suivant
           </button>
@@ -135,29 +144,22 @@ function createErrorMessage(error: unknown): string {
       } @else {
         <p>Aucune note de frais.</p>
       }
-    } @else if (!failed()) {
+    } @else if (!list.failed()) {
       <p>Chargement…</p>
     }
   `,
 })
 export default class ExpenseReportListPage {
   private readonly reportsApi = inject(ExpenseReportsApi);
+  private readonly usersApi = inject(UsersApi);
   private readonly router = inject(Router);
 
-  protected readonly page = signal<PagedResult<ExpenseReportSummary> | undefined>(undefined);
-  protected readonly failed = signal(false);
-  protected readonly actionFailed = signal(false);
-  /** A deletion runs, until the page reloaded after it shows: a second click would act on a stale row. */
-  protected readonly busy = signal(false);
-  protected readonly pageCount = computed(() => {
-    const page = this.page();
-    return page ? pageCountOf(page) : 1;
-  });
-  private readonly pageRequests = new Subject<number>();
+  protected readonly list = pagedList((page) => this.reportsApi.list(page, pageSize));
 
-  /** Undefined while they load. */
+  /** Undefined while they load the first time; a reload keeps the list shown until it answers. */
   protected readonly activeUsers = signal<UserSummary[] | undefined>(undefined);
   protected readonly usersFailed = signal(false);
+  private readonly userLoads = new Subject<void>();
   protected readonly creating = signal(false);
   protected readonly createError = signal<string | null>(null);
   protected readonly form = inject(NonNullableFormBuilder).group({
@@ -166,32 +168,21 @@ export default class ExpenseReportListPage {
   });
 
   constructor() {
-    inject(UsersApi)
-      .listAllActive()
-      .subscribe({
-        next: (users) => this.activeUsers.set(users),
-        error: () => this.usersFailed.set(true),
-      });
-    this.pageRequests
+    this.userLoads
       .pipe(
-        // Only the latest request counts: an answer arriving late must not replace the page asked for since.
-        switchMap((pageNumber) =>
-          this.reportsApi.list(pageNumber, pageSize).pipe(
+        // Only the latest load counts: an answer arriving late must not replace the users loaded since.
+        switchMap(() =>
+          this.usersApi.listAllActive().pipe(
             catchError(() => {
-              this.failed.set(true);
-              this.busy.set(false);
+              this.usersFailed.set(true);
               return EMPTY;
             })
           )
         ),
         takeUntilDestroyed()
       )
-      .subscribe((page) => this.show(page));
-    this.load(1);
-  }
-
-  protected load(pageNumber: number): void {
-    this.pageRequests.next(pageNumber);
+      .subscribe((users) => this.showUsers(users));
+    this.userLoads.next();
   }
 
   protected errorFor(field: 'userId' | 'month'): string | null {
@@ -221,36 +212,26 @@ export default class ExpenseReportListPage {
         error: (error: unknown) => {
           this.creating.set(false);
           this.createError.set(createErrorMessage(error));
+          if (isUnavailableUser(error)) {
+            this.userLoads.next();
+          }
         },
       });
   }
 
   protected remove(report: ExpenseReportSummary): void {
-    if (!confirmDeletion(report.title)) {
-      return;
+    if (confirmDeletion(report.title)) {
+      this.list.run(this.reportsApi.delete(report.id));
     }
-    this.busy.set(true);
-    this.actionFailed.set(false);
-    this.reportsApi.delete(report.id).subscribe({
-      next: () => this.load(this.page()?.page ?? 1),
-      error: () => {
-        // The report may be gone (deleted in another tab): reload so a stale row does not stay.
-        this.actionFailed.set(true);
-        this.load(this.page()?.page ?? 1);
-      },
-    });
   }
 
-  private show(page: PagedResult<ExpenseReportSummary>): void {
-    // Reports were deleted past the page shown: show the last page left rather than an empty one. Always an earlier
-    // page, so this ends even if more reports go meanwhile.
-    const lastPage = pageCountOf(page);
-    if (page.items.length === 0 && page.page > lastPage) {
-      this.load(lastPage);
-      return;
+  private showUsers(users: UserSummary[]): void {
+    this.activeUsers.set(users);
+    this.usersFailed.set(false);
+    // The chosen user is gone from the list: the <select> would show another one than the form holds.
+    const userId = this.form.controls.userId;
+    if (userId.value !== '' && !users.some((user) => user.id === userId.value)) {
+      userId.setValue('');
     }
-    this.page.set(page);
-    this.failed.set(false);
-    this.busy.set(false);
   }
 }
