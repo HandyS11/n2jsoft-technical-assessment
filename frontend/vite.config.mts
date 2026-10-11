@@ -23,6 +23,8 @@ export default defineConfig(() => ({
     coverage: {
       reportsDirectory: './coverage/n2f',
       provider: 'v8' as const,
+      // lcov feeds the SonarQube analysis
+      reporter: ['text', 'html', 'lcov'],
     },
   },
 }));
