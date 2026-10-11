@@ -3,7 +3,6 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "prestart": "npm install",
     "start": "run-script-os",
     "start:win32": "nx serve --port %PORT%",
     "start:default": "nx serve --port $PORT",
