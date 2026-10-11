@@ -14,6 +14,15 @@ describe('appRoutes', () => {
           provide: UsersApi,
           useValue: {
             list: () => of({ items: [], page: 1, pageSize: 20, totalCount: 0 }),
+            get: () =>
+              of({
+                id: '1',
+                firstName: 'Juste',
+                lastName: 'Leblanc',
+                address: { street: '12 rue de Rivoli', postalCode: '75001', city: 'Paris' },
+                monthlyExpenseQuota: 10,
+                isActive: true,
+              }),
           },
         },
       ],
@@ -34,5 +43,25 @@ describe('appRoutes', () => {
     await harness.navigateByUrl('/page-inconnue');
 
     expect(TestBed.inject(Router).url).toBe('/users');
+  });
+
+  it('opens the creation form at /users/new', async () => {
+    const harness = await RouterTestingHarness.create();
+
+    await harness.navigateByUrl('/users/new');
+
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(
+      'Nouvel utilisateur'
+    );
+  });
+
+  it('opens the edit form at /users/:id/edit', async () => {
+    const harness = await RouterTestingHarness.create();
+
+    await harness.navigateByUrl('/users/1/edit');
+
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(
+      "Modifier l'utilisateur"
+    );
   });
 });
