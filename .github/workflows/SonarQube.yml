@@ -8,7 +8,6 @@ on:
   push:
     branches:
       - develop
-      - ci/sonarqube # temporary: test the workflow before it reaches develop
   workflow_dispatch:
 
 concurrency:
