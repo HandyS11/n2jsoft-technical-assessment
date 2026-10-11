@@ -1,6 +1,9 @@
 import { Component, input } from '@angular/core';
 import { PagedList } from './paged-list';
 
+/** What the pagination bar reads of a paged list. */
+export type Pager = Pick<PagedList<unknown>, 'page' | 'busy' | 'pageCount' | 'load'>;
+
 /** *Précédent* / *Suivant* and « Page X sur Y » under a paged list; nothing until its first page shows. */
 @Component({
   selector: 'app-pagination',
@@ -23,5 +26,5 @@ import { PagedList } from './paged-list';
   `,
 })
 export class PaginationComponent {
-  readonly list = input.required<PagedList<unknown>>();
+  readonly list = input.required<Pager>();
 }

@@ -1,8 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { PagedList } from './paged-list';
 import { PagedResult, pageCountOf } from './paged-result';
-import { PaginationComponent } from './pagination.component';
+import { Pager, PaginationComponent } from './pagination.component';
 
 function pageOf(page: number, totalCount: number): PagedResult<unknown> {
   return { items: [], page, pageSize: 20, totalCount };
@@ -11,16 +10,13 @@ function pageOf(page: number, totalCount: number): PagedResult<unknown> {
 function fakeList(shown: PagedResult<unknown> | undefined, busy = false) {
   return {
     page: signal(shown),
-    failed: signal(false),
-    actionFailed: signal(false),
     busy: signal(busy),
     pageCount: signal(shown ? pageCountOf(shown) : 1),
     load: vi.fn(),
-    run: vi.fn(),
-  } satisfies PagedList<unknown>;
+  } satisfies Pager;
 }
 
-function render(list: PagedList<unknown>) {
+function render(list: Pager) {
   const fixture = TestBed.createComponent(PaginationComponent);
   fixture.componentRef.setInput('list', list);
   fixture.detectChanges();
