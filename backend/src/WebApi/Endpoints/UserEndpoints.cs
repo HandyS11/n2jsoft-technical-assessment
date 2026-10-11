@@ -59,10 +59,9 @@ internal static class UserEndpoints
     private static async Task<Created<UserDetails>> CreateUserAsync(
         SaveUserRequest request,
         CreateUserHandler handler,
-        IUserStore userStore,
         CancellationToken cancellationToken)
     {
-        var id = await handler.HandleAsync(
+        var user = await handler.HandleAsync(
                 new CreateUserCommand(
                     request.FirstName,
                     request.LastName,
@@ -70,9 +69,7 @@ internal static class UserEndpoints
                     request.MonthlyExpenseQuota),
                 cancellationToken)
             .ConfigureAwait(false);
-        var user = await userStore.GetDetailsAsync(id, cancellationToken).ConfigureAwait(false)
-                   ?? throw new InvalidOperationException($"User '{id}' cannot be read back after its creation.");
-        return TypedResults.Created(new Uri($"/v1/users/{id}", UriKind.Relative), user);
+        return TypedResults.Created(new Uri($"/v1/users/{user.Id}", UriKind.Relative), user);
     }
 
     private static async Task<NoContent> UpdateUserAsync(

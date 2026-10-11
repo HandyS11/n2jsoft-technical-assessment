@@ -36,16 +36,22 @@ public sealed class CreateUserHandlerTests
     }
 
     [Fact]
-    public async Task Returns_the_id_of_the_new_user()
+    public async Task Returns_the_details_of_the_new_user()
     {
         User? added = null;
         _userStore.Add(Arg.Do<User>(user => added = user));
 
-        var id = await CreateHandler().HandleAsync(
+        var details = await CreateHandler().HandleAsync(
             new CreateUserCommand("Jeanne", "Martin", Bordeaux, 8),
             TestContext.Current.CancellationToken);
 
-        id.ShouldBe(added.ShouldNotBeNull().Id);
+        details.ShouldBe(new UserDetails(
+            added.ShouldNotBeNull().Id,
+            "Jeanne",
+            "Martin",
+            new UserAddress("5 rue Victor Hugo", "33000", "Bordeaux"),
+            8,
+            IsActive: true));
     }
 
     [Fact]

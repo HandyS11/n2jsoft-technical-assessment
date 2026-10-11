@@ -7,11 +7,11 @@ public sealed record CreateUserCommand(string FirstName, string LastName, Addres
 
 public sealed class CreateUserHandler(IUserStore userStore)
 {
-    public async Task<Guid> HandleAsync(CreateUserCommand command, CancellationToken cancellationToken)
+    public async Task<UserDetails> HandleAsync(CreateUserCommand command, CancellationToken cancellationToken)
     {
         var user = User.Create(command.FirstName, command.LastName, command.Address, command.MonthlyExpenseQuota);
         userStore.Add(user);
         await userStore.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return user.Id;
+        return UserDetails.From(user);
     }
 }
