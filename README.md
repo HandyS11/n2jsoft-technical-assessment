@@ -290,12 +290,12 @@ Réalisé :
 
 ### Lancer les tests
 
-| Niveau                                      | Commande                                                   | Prérequis       |
-|---------------------------------------------|------------------------------------------------------------|-----------------|
-| Unitaires (xUnit v3, Shouldly, NSubstitute) | `dotnet test --project backend/tests/UnitTests`            | —               |
-| Acceptation (Reqnroll, Testcontainers)      | `dotnet test --project backend/tests/AcceptanceTests`      | Docker          |
-| Bout en bout (Aspire, Playwright)           | `dotnet test --project backend/tests/EndToEndTests`        | Docker, Node.js |
-| Front (Vitest)                              | `cd frontend && npx nx run-many -t lint test build`        | Node.js         |
+| Niveau                                      | Commande                                                      | Prérequis       |
+|---------------------------------------------|---------------------------------------------------------------|-----------------|
+| Unitaires (xUnit v3, Shouldly, NSubstitute) | `dotnet test --project backend/tests/UnitTests`               | —               |
+| Acceptation (Reqnroll, Testcontainers)      | `dotnet test --project backend/tests/AcceptanceTests`         | Docker          |
+| Bout en bout (Aspire, Playwright)           | `dotnet test --project backend/tests/EndToEndTests`           | Docker, Node.js |
+| Front (Vitest)                              | `cd frontend && npm ci && npx nx run-many -t lint test build` | Node.js         |
 
 - Les tests de bout en bout installent Chromium automatiquement au premier lancement (dans
   `~/.cache/ms-playwright`). Sous Linux, s'il manque des bibliothèques système :
