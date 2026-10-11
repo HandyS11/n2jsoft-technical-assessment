@@ -1,7 +1,9 @@
 using Application.ExpenseReports;
+using Application.Expenses;
 using Application.Persistence;
 using Application.Users;
 using Infrastructure.ExpenseReports;
+using Infrastructure.Expenses;
 using Infrastructure.Persistence;
 using Infrastructure.Users;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +24,7 @@ public static class DependencyInjectionExtensions
         builder.Services.AddScoped<ITransactionRunner, TransactionRunner>();
         builder.Services.AddScoped<IUserStore, UserStore>();
         builder.Services.AddScoped<IExpenseReportStore, ExpenseReportStore>();
+        builder.Services.AddScoped<IExpenseStore, ExpenseStore>();
 
         return builder;
     }

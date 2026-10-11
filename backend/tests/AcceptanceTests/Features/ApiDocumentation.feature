@@ -1,6 +1,6 @@
 Feature: API documentation
 
-  Scenario Outline: The v1 OpenAPI document describes the users endpoints
+  Scenario Outline: The v1 OpenAPI document describes the endpoints
     Given the API runs in the Development environment
     When I request "/openapi/v1.json"
     Then the response status is 200
@@ -15,6 +15,8 @@ Feature: API documentation
       | /v1/users/{id}/deactivate |
       | /v1/expense-reports       |
       | /v1/expense-reports/{id}  |
+      | /v1/expense-reports/{reportId}/expenses      |
+      | /v1/expense-reports/{reportId}/expenses/{id} |
 
   Scenario Outline: The v1 OpenAPI document describes the error responses
     Given the API runs in the Development environment
@@ -43,6 +45,9 @@ Feature: API documentation
       | post   | /v1/expense-reports       | 404    |
       | post   | /v1/expense-reports       | 422    |
       | delete | /v1/expense-reports/{id}  | 404    |
+      | get    | /v1/expense-reports/{reportId}/expenses      | 400    |
+      | get    | /v1/expense-reports/{reportId}/expenses      | 404    |
+      | get    | /v1/expense-reports/{reportId}/expenses/{id} | 404    |
 
   Scenario: The v1 OpenAPI document describes the active filter of the users list
     Given the API runs in the Development environment

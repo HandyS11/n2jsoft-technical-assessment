@@ -58,6 +58,7 @@ app.UseHttpsRedirection();
 
 app.MapUserEndpoints();
 app.MapExpenseReportEndpoints();
+app.MapExpenseEndpoints();
 app.MapHealthChecks("/health");
 
 await app.RunAsync().ConfigureAwait(false);

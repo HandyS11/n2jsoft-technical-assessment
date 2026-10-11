@@ -47,9 +47,22 @@ internal sealed class ExpenseReportStore(AppDbContext dbContext) : IExpenseRepor
             cancellationToken);
     }
 
+    public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return dbContext.Set<ExpenseReport>().AnyAsync(report => report.Id == id, cancellationToken);
+    }
+
     public Task<ExpenseReport?> FindAsync(Guid id, CancellationToken cancellationToken)
     {
         return dbContext.Set<ExpenseReport>().SingleOrDefaultAsync(report => report.Id == id, cancellationToken);
+    }
+
+    public Task<ExpenseReport?> FindLockedAsync(Guid id, CancellationToken cancellationToken)
+    {
+        // FOR UPDATE: another request locking the report, or deleting it, waits for the commit.
+        return dbContext.Set<ExpenseReport>()
+            .FromSql($"""SELECT * FROM expense_reports WHERE "Id" = {id} FOR UPDATE""")
+            .SingleOrDefaultAsync(cancellationToken);
     }
 
     public void Add(ExpenseReport report)

@@ -57,3 +57,18 @@ Feature: Delete an expense report
   Scenario: Deleting an unknown expense report answers not found
     When I delete an unknown expense report
     Then the response is a problem with status 404
+
+  Scenario: Deleting a report deletes its expenses, deleted ones included
+    Given the following users exist
+      | First name | Last name |
+      | Juste      | Leblanc   |
+    And the following expense reports exist
+      | User          | Month   |
+      | Juste Leblanc | 2025-10 |
+    And the following expenses exist in "Juste Leblanc - Octobre 2025"
+      | Date       | Description | Status  |
+      | 2025-10-02 | Hôtel       |         |
+      | 2025-10-15 | Taxi        | Deleted |
+    When I delete the expense report "Juste Leblanc - Octobre 2025"
+    Then the response status is 204
+    And no expense of "Juste Leblanc - Octobre 2025" is stored anymore, deleted ones included

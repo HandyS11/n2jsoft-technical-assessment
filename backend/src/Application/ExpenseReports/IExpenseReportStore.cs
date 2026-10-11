@@ -17,8 +17,16 @@ public interface IExpenseReportStore
 
     Task<bool> ExistsAsync(Guid userId, ReportMonth period, CancellationToken cancellationToken);
 
+    Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken);
+
     /// <summary>The tracked report, to delete; null when unknown.</summary>
     Task<ExpenseReport?> FindAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The tracked report, locked until the transaction ends (SELECT … FOR UPDATE): another request locking it, or
+    /// deleting it, waits. Null when unknown.
+    /// </summary>
+    Task<ExpenseReport?> FindLockedAsync(Guid id, CancellationToken cancellationToken);
 
     void Add(ExpenseReport report);
 
