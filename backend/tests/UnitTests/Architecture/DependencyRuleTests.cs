@@ -19,6 +19,7 @@ public sealed class DependencyRuleTests
     [InlineData("Microsoft.AspNetCore")]
     [InlineData("Npgsql")]
     [InlineData("Aspire")]
+    [InlineData("OpenTelemetry")]
     public void Domain_does_not_depend_on(string forbidden)
     {
         ReferencedAssemblyNames(DomainAssembly)
@@ -32,6 +33,7 @@ public sealed class DependencyRuleTests
     [InlineData("Microsoft.AspNetCore")]
     [InlineData("Npgsql")]
     [InlineData("Aspire")]
+    [InlineData("OpenTelemetry")]
     public void Application_does_not_depend_on(string forbidden)
     {
         ReferencedAssemblyNames(ApplicationAssembly)

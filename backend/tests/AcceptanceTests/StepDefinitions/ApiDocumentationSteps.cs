@@ -11,7 +11,7 @@ public sealed class ApiDocumentationSteps(ApiDriver api)
     [Given("the API runs in the Development environment")]
     public void GivenTheApiRunsInTheDevelopmentEnvironment()
     {
-        api.UseDevelopmentEnvironment();
+        api.UseFactory(TestEnvironment.DevelopmentFactory);
     }
 
     [Then("the OpenAPI document lists the path {string}")]

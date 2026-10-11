@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace AcceptanceTests.Support;
 
@@ -19,10 +20,11 @@ public sealed class ApiDriver : IDisposable
         _client.Dispose();
     }
 
-    public void UseDevelopmentEnvironment()
+    /// <summary>Sends the next requests to another host of the API. The caller keeps owning the factory.</summary>
+    public void UseFactory(WebApplicationFactory<Program> factory)
     {
         _client.Dispose();
-        _client = TestEnvironment.DevelopmentFactory.CreateClient();
+        _client = factory.CreateClient();
     }
 
     public Task GetAsync(string path)

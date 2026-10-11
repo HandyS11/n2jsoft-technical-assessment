@@ -5,6 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, EMPTY, finalize, Observable, of, Subject, switchMap } from 'rxjs';
 import { pagedList } from '../../core/paged-list';
+import { PaginationComponent } from '../../core/pagination.component';
 import { ExpenseDetails, ExpenseSummary, formatBillingAddress } from '../expenses/expense';
 import { ExpenseFormComponent } from '../expenses/expense-form.component';
 import { ExpensesApi } from '../expenses/expenses.api';
@@ -26,7 +27,7 @@ function expenseCount(count: number): string {
 
 @Component({
   selector: 'app-expense-report-page',
-  imports: [CurrencyPipe, ExpenseFormComponent, RouterLink],
+  imports: [CurrencyPipe, ExpenseFormComponent, PaginationComponent, RouterLink],
   template: `
     <a routerLink="/expense-reports" class="underline">← Notes de frais</a>
     @if (loadError(); as message) {
@@ -105,23 +106,7 @@ function expenseCount(count: number): string {
                 }
               </tbody>
             </table>
-            <nav aria-label="Pagination" class="mt-4 flex items-center gap-4">
-              <button
-                type="button"
-                [disabled]="expenses.busy() || page.page <= 1"
-                (click)="expenses.load(page.page - 1)"
-              >
-                Précédent
-              </button>
-              <span>Page {{ page.page }} sur {{ expenses.pageCount() }}</span>
-              <button
-                type="button"
-                [disabled]="expenses.busy() || page.page >= expenses.pageCount()"
-                (click)="expenses.load(page.page + 1)"
-              >
-                Suivant
-              </button>
-            </nav>
+            <app-pagination [list]="expenses" />
           } @else {
             <p>Aucune dépense.</p>
           }

@@ -1,7 +1,11 @@
+using System.Diagnostics;
 using Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using OpenTelemetry.Trace;
 using Respawn;
 using Testcontainers.PostgreSql;
 
@@ -29,6 +33,32 @@ public static class TestEnvironment
 
     private static string ConnectionString =>
         _postgres?.GetConnectionString() ?? throw new InvalidOperationException("Postgres is not started.");
+
+    /// <summary>
+    /// Adds an in-memory exporter to the tracing the API sets up itself, so its instrumentation and filters apply as
+    /// they do under Aspire. For one scenario: dispose it at its end. A tracer provider listens to every host in the
+    /// process, so a factory left running would go on recording the spans of the scenarios after it.
+    /// </summary>
+    public static WebApplicationFactory<Program> CreateTelemetryRecordingFactory(ICollection<Activity> spans)
+    {
+        return Factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.AddOpenTelemetry().WithTracing(tracing => tracing.AddInMemoryExporter(spans))));
+    }
+
+    /// <summary>
+    /// Exports over OTLP, as under Aspire, to a port nothing listens on (the dashboard stopped). Traces and logs are
+    /// exported every 100 ms rather than every 5 s, and a request gives up after 1 s rather than 10 s, so a scenario
+    /// soon sees an export fail. For one scenario, like <see cref="CreateTelemetryRecordingFactory" />: left running,
+    /// it would go on exporting the telemetry of the scenarios after it.
+    /// </summary>
+    public static WebApplicationFactory<Program> CreateUnreachableCollectorFactory()
+    {
+        return Factory.WithWebHostBuilder(builder => builder
+            .UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:9")
+            .UseSetting("OTEL_EXPORTER_OTLP_TIMEOUT", "1000")
+            .UseSetting("OTEL_BSP_SCHEDULE_DELAY", "100")
+            .UseSetting("OTEL_BLRP_SCHEDULE_DELAY", "100"));
+    }
 
     public static async Task StartAsync()
     {
