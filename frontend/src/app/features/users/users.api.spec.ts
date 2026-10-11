@@ -17,6 +17,22 @@ const jeanne: SaveUser = {
   monthlyExpenseQuota: 8,
 };
 const details: UserDetails = { ...jeanne, id, isActive: true, version: 1 };
+const justeSummary: UserSummary = {
+  id: '1',
+  name: 'Juste Leblanc',
+  city: 'Paris',
+  monthlyExpenseQuota: 10,
+  isActive: true,
+};
+const marcSummary: UserSummary = { ...justeSummary, id: '2', name: 'Marc Assin', city: 'Lyon' };
+
+function activePage(
+  items: UserSummary[],
+  page: number,
+  totalCount: number
+): PagedResult<UserSummary> {
+  return { items, page, pageSize: 100, totalCount };
+}
 
 describe('UsersApi', () => {
   let api: UsersApi;
@@ -112,5 +128,49 @@ describe('UsersApi', () => {
     const request = http.expectOne(`/api/v1/users/${id}`);
     expect(request.request.method).toBe('DELETE');
     request.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
+  it('lists only the active users with ?isActive=true', () => {
+    api.list(1, 20, true).subscribe();
+
+    const request = http.expectOne('/api/v1/users?page=1&pageSize=20&isActive=true');
+    expect(request.request.method).toBe('GET');
+    request.flush(activePage([], 1, 0));
+  });
+
+  it('reads every page of active users, 100 at a time', () => {
+    let result: UserSummary[] | undefined;
+
+    api.listAllActive().subscribe((value) => (result = value));
+
+    http
+      .expectOne('/api/v1/users?page=1&pageSize=100&isActive=true')
+      .flush(activePage([justeSummary], 1, 101));
+    http
+      .expectOne('/api/v1/users?page=2&pageSize=100&isActive=true')
+      .flush(activePage([marcSummary], 2, 101));
+    expect(result).toEqual([justeSummary, marcSummary]);
+  });
+
+  it('asks for one page only when every active user fits in it', () => {
+    let result: UserSummary[] | undefined;
+
+    api.listAllActive().subscribe((value) => (result = value));
+
+    http
+      .expectOne('/api/v1/users?page=1&pageSize=100&isActive=true')
+      .flush(activePage([justeSummary], 1, 1));
+    expect(result).toEqual([justeSummary]);
+  });
+
+  it('stops at an empty page, even when the total says there are more', () => {
+    let result: UserSummary[] | undefined;
+
+    api.listAllActive().subscribe((value) => (result = value));
+
+    http
+      .expectOne('/api/v1/users?page=1&pageSize=100&isActive=true')
+      .flush(activePage([], 1, 250));
+    expect(result).toEqual([]);
   });
 });

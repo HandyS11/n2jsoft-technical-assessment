@@ -2,16 +2,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { catchError, EMPTY, Observable, Subject, switchMap } from 'rxjs';
-import { PagedResult } from '../../core/paged-result';
+import { PagedResult, pageCountOf } from '../../core/paged-result';
 import { UserSummary } from './user-summary';
 import { UsersApi } from './users.api';
 
 const pageSize = 20;
-
-/** At least 1: an empty list still shows as page 1 of 1. */
-function pageCountOf(page: PagedResult<unknown>): number {
-  return Math.max(1, Math.ceil(page.totalCount / page.pageSize));
-}
 
 @Component({
   selector: 'app-user-list-page',
