@@ -8,6 +8,11 @@ import { UsersApi } from './users.api';
 
 const pageSize = 20;
 
+/** At least 1: an empty list still shows as page 1 of 1. */
+function pageCountOf(page: PagedResult<unknown>): number {
+  return Math.max(1, Math.ceil(page.totalCount / page.pageSize));
+}
+
 @Component({
   selector: 'app-user-list-page',
   imports: [RouterLink],
@@ -76,7 +81,7 @@ export default class UserListPage {
   protected readonly actionFailed = signal(false);
   protected readonly pageCount = computed(() => {
     const page = this.page();
-    return page ? Math.max(1, Math.ceil(page.totalCount / page.pageSize)) : 1;
+    return page ? pageCountOf(page) : 1;
   });
 
   private readonly pageRequests = new Subject<number>();
@@ -104,9 +109,11 @@ export default class UserListPage {
   }
 
   private show(page: PagedResult<UserSummary>): void {
-    // The last user of the last page is gone: show the page before rather than an empty one.
-    if (page.items.length === 0 && page.page > 1) {
-      this.load(page.page - 1);
+    // Users were deleted past the page shown: show the last page left rather than an empty one. Always an earlier
+    // page, so this ends even if more users go meanwhile.
+    const lastPage = pageCountOf(page);
+    if (page.items.length === 0 && page.page > lastPage) {
+      this.load(lastPage);
       return;
     }
     this.page.set(page);

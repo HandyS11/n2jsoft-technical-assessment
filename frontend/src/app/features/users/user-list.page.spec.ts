@@ -210,6 +210,32 @@ describe('UserListPage', () => {
     expect(page.element.textContent).toContain('Page 1 sur 1');
   });
 
+  it('jumps straight to the last page left when users were deleted past it', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    let deleted = false;
+    const api = fakeApi((page) => {
+      if (deleted) {
+        return of(page === 1 ? pageOf([marc], 1, 20) : pageOf([], page, 20));
+      }
+      return of(pageOf([juste], page, 100));
+    });
+    api.delete.mockImplementation(() => {
+      deleted = true;
+      return of(undefined);
+    });
+    const page = render(api);
+    for (let i = 0; i < 4; i++) {
+      page.click('Suivant');
+    }
+
+    page.click('Supprimer', 0);
+
+    expect(api.list.mock.calls.map(([pageNumber]) => pageNumber)).toEqual([
+      1, 2, 3, 4, 5, 5, 1,
+    ]);
+    expect(page.element.textContent).toContain('Page 1 sur 1');
+  });
+
   it('ignores an answer arriving after a later request', () => {
     const pageTwo = new Subject<PagedResult<UserSummary>>();
     const api = fakeApi((page) =>
