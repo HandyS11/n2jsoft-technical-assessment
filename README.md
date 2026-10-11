@@ -142,6 +142,8 @@ Réalisé :
   Postgres), aussi renvoyée en `ETag`. Un `PUT` avec `If-Match` est refusé en `412` si l'utilisateur a changé
   depuis sa lecture ; le formulaire l'envoie toujours. Toute écriture enregistrée par-dessus une modification
   concurrente répond `409`.
+- **Migration des données existantes** : les utilisateurs créés avant la tranche reçoivent une adresse à
+  compléter, le statut actif et un quota de 10, au lieu de valeurs que le domaine refuse.
 - **Accès aux données** : un « store » par fonctionnalité (`IUserStore` dans `Application`, implémenté sur le
   `DbContext` dans `Infrastructure`) sert les lectures et les écritures. Pas de repository ni d'`IUnitOfWork` :
   le `DbContext` est déjà une unité de travail. Un handler par cas d'usage en écriture.
