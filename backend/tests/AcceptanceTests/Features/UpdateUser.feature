@@ -33,3 +33,13 @@ Feature: Update a user
   Scenario: Updating an unknown user answers not found
     When I update an unknown user
     Then the response is a problem with status 404
+
+  Scenario: A user stored with an address the current rules reject can still be corrected
+    Given the following users exist
+      | First name | Last name |
+      | Juste      | Leblanc   |
+    And the user "Juste Leblanc" is stored with a blank address
+    When I update the user "Juste Leblanc" with
+      | First name | Last name | Street         | Postal code | City      | Monthly quota |
+      | Juste      | Leblanc   | 8 quai du Port | 13002       | Marseille | 4             |
+    Then the response status is 204

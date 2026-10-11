@@ -37,6 +37,17 @@ public sealed class UserSteps(ApiDriver api, KnownUsers knownUsers)
         }
     }
 
+    /// <summary>A row written before the address existed: UserDetails left it blank, which Address now rejects.</summary>
+    [Given("the user {string} is stored with a blank address")]
+    public async Task GivenTheUserIsStoredWithABlankAddressAsync(string name)
+    {
+        var id = knownUsers.IdOf(name);
+        using var scope = TestEnvironment.Factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await dbContext.Database.ExecuteSqlAsync(
+            $"""UPDATE users SET "Address_Street" = '', "Address_PostalCode" = '', "Address_City" = '' WHERE "Id" = {id}""");
+    }
+
     [When("I list the users")]
     public Task WhenIListTheUsersAsync()
     {

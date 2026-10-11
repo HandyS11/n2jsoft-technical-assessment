@@ -21,6 +21,17 @@ public sealed record Address
         City = Text.Required(city, CityMaxLength);
     }
 
+    /// <summary>
+    /// For EF Core only, which then sets the properties it loads: a stored address is not checked again, so a row
+    /// written under older rules can still be read, then corrected.
+    /// </summary>
+    private Address()
+    {
+        Street = string.Empty;
+        PostalCode = string.Empty;
+        City = string.Empty;
+    }
+
     public string Street { get; }
     public string PostalCode { get; }
     public string City { get; }
