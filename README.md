@@ -127,6 +127,33 @@ Réalisé :
 - **CI** : build et tests unitaires sur Ubuntu, Windows et macOS ; les tests qui ont besoin de Docker
   (acceptation, bout en bout) tournent sur Ubuntu uniquement.
 
+### Tranche 2 — Utilisateurs
+
+Réalisé :
+
+- **Modèle complet** : nom, prénom, adresse postale (rue, code postal à 5 chiffres, ville), quota mensuel de
+  dépenses, statut actif/inactif et suppression logique. Les règles sont portées par l'entité `User` et l'objet
+  valeur `Address`, testés unitairement.
+- **API** sous `/v1/users` : liste paginée, détail, création (`201` + `Location`), modification (`PUT`),
+  activation et désactivation (`POST …/activate`, `…/deactivate`, sans erreur si le statut est déjà le bon),
+  suppression logique (`DELETE`). Un utilisateur supprimé disparaît partout : toute requête le concernant répond
+  `404`.
+- **Accès aux données** : un « store » par fonctionnalité (`IUserStore` dans `Application`, implémenté sur le
+  `DbContext` dans `Infrastructure`) sert les lectures et les écritures. Pas de repository ni d'`IUnitOfWork` :
+  le `DbContext` est déjà une unité de travail. Un handler par cas d'usage en écriture.
+- **Front** : liste paginée (statut, activation, suppression avec confirmation) et formulaire de création et de
+  modification, avec des messages de validation en français.
+
+Hypothèses (le sujet ne précise pas) :
+
+- Le quota mensuel est un entier supérieur ou égal à 1, sans plafond. Il reste modifiable ; le baisser sous le
+  nombre de dépenses déjà saisies dans le mois ne touche pas l'existant et ne bloque que les nouvelles dépenses.
+- Longueurs maximales : 100 caractères pour le nom et le prénom, 200 pour la rue, 100 pour la ville. Les espaces
+  en début et en fin sont retirés.
+- Un utilisateur inactif reste visible et modifiable ; seul son rattachement à une nouvelle note de frais sera
+  refusé (tranche 3).
+- Un utilisateur supprimé ne peut pas être restauré.
+
 ### Lancer les tests
 
 | Niveau                                      | Commande                                                   | Prérequis       |
@@ -145,8 +172,8 @@ Réalisé :
 
 ### Pistes d'amélioration
 
-- Ajouter les contrôles de pagination à la liste des utilisateurs : elle n'affiche pour l'instant que la première
-  page (20 utilisateurs).
+- Ajouter l'authentification et l'autorisation : l'API et l'interface sont ouvertes, sans connexion. Le sujet décrit un
+  administrateur unique et ne prévoit pas de connexion.
 - Générer le client TypeScript à partir du document OpenAPI, au lieu de maintenir les interfaces à la main.
 - Passer le front en détection de changements sans zone.js (zoneless).
 - Supprimer le script `prestart: npm install` du front : Aspire 13.6 installe déjà les dépendances avant de
