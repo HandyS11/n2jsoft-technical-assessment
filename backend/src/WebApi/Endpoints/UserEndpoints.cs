@@ -16,13 +16,21 @@ internal static class UserEndpoints
             .MapGroup("/v{version:apiVersion}/users")
             .HasApiVersion(1.0);
 
-        users.MapGet("/", ListUsersAsync);
-        users.MapGet("/{id:guid}", GetUserAsync);
-        users.MapPost("/", CreateUserAsync);
-        users.MapPut("/{id:guid}", UpdateUserAsync);
-        users.MapPost("/{id:guid}/activate", ActivateUserAsync);
-        users.MapPost("/{id:guid}/deactivate", DeactivateUserAsync);
-        users.MapDelete("/{id:guid}", DeleteUserAsync);
+        users.MapGet("/", ListUsersAsync)
+            .ProducesValidationProblem();
+        users.MapGet("/{id:guid}", GetUserAsync)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+        users.MapPost("/", CreateUserAsync)
+            .ProducesValidationProblem();
+        users.MapPut("/{id:guid}", UpdateUserAsync)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+        users.MapPost("/{id:guid}/activate", ActivateUserAsync)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+        users.MapPost("/{id:guid}/deactivate", DeactivateUserAsync)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+        users.MapDelete("/{id:guid}", DeleteUserAsync)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return endpoints;
     }
