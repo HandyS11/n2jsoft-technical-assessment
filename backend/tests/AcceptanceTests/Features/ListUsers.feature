@@ -41,3 +41,17 @@ Feature: List users
       | page=0        |
       | pageSize=0    |
       | pageSize=101  |
+
+  Scenario: Listing shows each user's city, monthly quota and status, but not deleted users
+    Given the following users exist
+      | First name | Last name | City  | Monthly quota | Status   |
+      | Juste      | Leblanc   | Paris | 10            | Active   |
+      | Marc       | Assin     | Lyon  | 5             | Inactive |
+      | Albert     | Leblanc   | Lille | 3             | Deleted  |
+    When I list the users
+    Then the response status is 200
+    And the users listed with their details are
+      | Name          | City  | Monthly quota | Status   |
+      | Marc Assin    | Lyon  | 5             | Inactive |
+      | Juste Leblanc | Paris | 10            | Active   |
+    And the listing reports 2 users in total

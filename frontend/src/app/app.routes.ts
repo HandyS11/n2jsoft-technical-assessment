@@ -7,5 +7,15 @@ export const appRoutes: Route[] = [
     title: 'Utilisateurs',
     loadComponent: () => import('./features/users/user-list.page'),
   },
+  {
+    path: 'users/new',
+    title: 'Nouvel utilisateur',
+    loadComponent: () => import('./features/users/user-form.page'),
+  },
+  {
+    path: 'users/:id/edit',
+    title: "Modifier l'utilisateur",
+    loadComponent: () => import('./features/users/user-form.page'),
+  },
   { path: '**', redirectTo: 'users' },
 ];

@@ -1,29 +1,51 @@
-using System.Text.Json;
+using System.Globalization;
 using AcceptanceTests.Support;
 using Application.Paging;
-using Application.Users.Queries;
+using Application.Users;
 using Domain.Entities;
+using Domain.ValueObjects;
 using Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Reqnroll;
 
 namespace AcceptanceTests.StepDefinitions;
 
 [Binding]
-public sealed class UserSteps(ApiDriver api)
+public sealed class UserSteps(ApiDriver api, KnownUsers knownUsers)
 {
     private const string UsersPath = "/v1/users";
 
+    /// <summary>
+    /// "First name" and "Last name" are required. "Street", "Postal code", "City" and "Monthly quota" default to valid
+    /// values; "Status" is Active (default), Inactive or Deleted.
+    /// </summary>
     [Given("the following users exist")]
-    public static async Task GivenTheFollowingUsersExistAsync(DataTable table)
+    public async Task GivenTheFollowingUsersExistAsync(DataTable table)
     {
+        var users = table.Rows.Select(ToUser).ToList();
+        using (var scope = TestEnvironment.Factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            dbContext.AddRange(users);
+            await dbContext.SaveChangesAsync();
+        }
+
+        foreach (var user in users)
+        {
+            knownUsers.Add($"{user.FirstName} {user.LastName}", user.Id);
+        }
+    }
+
+    /// <summary>A row written before the address existed: UserDetails left it blank, which Address now rejects.</summary>
+    [Given("the user {string} is stored with a blank address")]
+    public async Task GivenTheUserIsStoredWithABlankAddressAsync(string name)
+    {
+        var id = knownUsers.IdOf(name);
         using var scope = TestEnvironment.Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        dbContext.AddRange(table.Rows.Select(row => new User
-        {
-            FirstName = row["First name"], LastName = row["Last name"],
-        }));
-        await dbContext.SaveChangesAsync();
+        await dbContext.Database.ExecuteSqlAsync(
+            $"""UPDATE users SET "Address_Street" = '', "Address_PostalCode" = '', "Address_City" = '' WHERE "Id" = {id}""");
     }
 
     [When("I list the users")]
@@ -38,17 +60,40 @@ public sealed class UserSteps(ApiDriver api)
         return api.GetAsync($"{UsersPath}?page={page}&pageSize={pageSize}");
     }
 
+    [When("I get the user {string}")]
+    public Task WhenIGetTheUserAsync(string name)
+    {
+        return api.GetAsync($"{UsersPath}/{knownUsers.IdOf(name)}");
+    }
+
+    [When("I get an unknown user")]
+    public Task WhenIGetAnUnknownUserAsync()
+    {
+        return api.GetAsync($"{UsersPath}/{Guid.NewGuid()}");
+    }
+
     [Then("the users listed are")]
     public async Task ThenTheUsersListedAreAsync(DataTable table)
     {
-        var users = await ReadUsersAsync();
+        var users = await api.ReadJsonAsync<PagedResult<UserSummary>>();
         users.Items.Select(user => user.Name).ShouldBe(table.Rows.Select(row => row["Name"]));
+    }
+
+    [Then("the users listed with their details are")]
+    public async Task ThenTheUsersListedWithTheirDetailsAreAsync(DataTable table)
+    {
+        var users = await api.ReadJsonAsync<PagedResult<UserSummary>>();
+        users.Items
+            .Select(user => (user.Name, user.City, user.MonthlyExpenseQuota, StatusOf(user.IsActive)))
+            .ShouldBe(table.Rows.Select(row =>
+                (row["Name"], row["City"], int.Parse(row["Monthly quota"], CultureInfo.InvariantCulture),
+                    row["Status"])));
     }
 
     [Then("no user is listed")]
     public async Task ThenNoUserIsListedAsync()
     {
-        var users = await ReadUsersAsync();
+        var users = await api.ReadJsonAsync<PagedResult<UserSummary>>();
         users.Items.ShouldBeEmpty();
         users.TotalCount.ShouldBe(0);
     }
@@ -56,14 +101,78 @@ public sealed class UserSteps(ApiDriver api)
     [Then("the listing reports {int} users in total")]
     public async Task ThenTheListingReportsUsersInTotalAsync(int totalCount)
     {
-        var users = await ReadUsersAsync();
+        var users = await api.ReadJsonAsync<PagedResult<UserSummary>>();
         users.TotalCount.ShouldBe(totalCount);
     }
 
-    /// <summary>Several Then steps read the same response: the buffered string can be read again, the stream cannot.</summary>
-    private async Task<PagedResult<UserSummary>> ReadUsersAsync()
+    [Then("the user returned is")]
+    public async Task ThenTheUserReturnedIsAsync(DataTable table)
     {
-        var json = await api.Response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<PagedResult<UserSummary>>(json, JsonSerializerOptions.Web).ShouldNotBeNull();
+        var user = await api.ReadJsonAsync<UserDetails>();
+        var expected = table.Rows.ShouldHaveSingleItem();
+        user.ShouldSatisfyAllConditions(
+            () => user.FirstName.ShouldBe(expected["First name"]),
+            () => user.LastName.ShouldBe(expected["Last name"]),
+            () => user.Address.Street.ShouldBe(expected["Street"]),
+            () => user.Address.PostalCode.ShouldBe(expected["Postal code"]),
+            () => user.Address.City.ShouldBe(expected["City"]),
+            () => user.MonthlyExpenseQuota.ShouldBe(int.Parse(expected["Monthly quota"], CultureInfo.InvariantCulture)),
+            () => StatusOf(user.IsActive).ShouldBe(expected["Status"]));
+    }
+
+    [Then("the user returned has the status {string}")]
+    public async Task ThenTheUserReturnedHasTheStatusAsync(string status)
+    {
+        var user = await api.ReadJsonAsync<UserDetails>();
+        StatusOf(user.IsActive).ShouldBe(status);
+    }
+
+    [Then("the user {string} is still stored, marked as deleted")]
+    public async Task ThenTheUserIsStillStoredMarkedAsDeletedAsync(string name)
+    {
+        var id = knownUsers.IdOf(name);
+        using var scope = TestEnvironment.Factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await dbContext.Set<User>().IgnoreQueryFilters().SingleAsync(stored => stored.Id == id);
+        user.DeletedAt.ShouldNotBeNull();
+    }
+
+    private static User ToUser(DataTableRow row)
+    {
+        var user = User.Create(
+            row["First name"],
+            row["Last name"],
+            new Address(
+                Optional(row, "Street", "1 rue de la Paix"),
+                Optional(row, "Postal code", "75002"),
+                Optional(row, "City", "Paris")),
+            int.Parse(Optional(row, "Monthly quota", "10"), CultureInfo.InvariantCulture));
+
+        switch (Optional(row, "Status", "Active"))
+        {
+            case "Active":
+                break;
+            case "Inactive":
+                user.Deactivate();
+                break;
+            case "Deleted":
+                user.Delete(DateTimeOffset.UtcNow);
+                break;
+            default:
+                throw new ArgumentException($"Unknown status {row["Status"]}: use Active, Inactive or Deleted.",
+                    nameof(row));
+        }
+
+        return user;
+    }
+
+    private static string Optional(DataTableRow row, string column, string defaultValue)
+    {
+        return row.TryGetValue(column, out var value) ? value : defaultValue;
+    }
+
+    private static string StatusOf(bool isActive)
+    {
+        return isActive ? "Active" : "Inactive";
     }
 }

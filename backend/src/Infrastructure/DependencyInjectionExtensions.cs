@@ -1,4 +1,4 @@
-using Application.Users.Queries;
+using Application.Users;
 using Infrastructure.Persistence;
 using Infrastructure.Users;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +16,7 @@ public static class DependencyInjectionExtensions
                 options.UseAsyncSeeding(async (context, _, cancellationToken) =>
                     await AppDbContext.SeedAsync(context, cancellationToken).ConfigureAwait(false)));
 
-        builder.Services.AddScoped<IUserQueries, UserQueries>();
+        builder.Services.AddScoped<IUserStore, UserStore>();
 
         return builder;
     }

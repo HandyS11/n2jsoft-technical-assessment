@@ -481,3 +481,8 @@ dotnet_diagnostic.VSTHRD103.severity = none # EF Core DbSet.Add is not blocking;
 
 [tools/**]
 dotnet_diagnostic.CS1591.severity = none # XML docs not required in internal tooling
+
+# Request bodies: .NET 10 minimal-API validation only generates validators for public types (internal ones are
+# skipped silently), so they cannot follow CA1515's advice to be internal.
+[backend/src/WebApi/Endpoints/Requests/**.cs]
+dotnet_diagnostic.CA1515.severity = none

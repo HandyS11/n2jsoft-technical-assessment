@@ -1,5 +1,0 @@
-@WebApi_HostAddress = http://localhost:5195
-
-### List users
-GET {{WebApi_HostAddress}}/v1/users?page=1&pageSize=20
-Accept: application/json

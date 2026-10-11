@@ -17,7 +17,7 @@ done, then brainstorms only what is new.
 | # | Slice           | Scope                                                                                                                                               | Depends on | Status      | Spec                                                         |
 |---|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|------------|-------------|--------------------------------------------------------------|
 | 1 | Foundation      | Clean Architecture restructure, API versioning, OpenAPI + Scalar, error contract, Redis removal, 3 backend test tiers, frontend shell, CI split | —          | Done        | [foundation](specs/2026-10-10-foundation-design.md), [plan](plans/2026-10-10-foundation.md) |
-| 2 | Users           | Full user model (address, active flag, monthly expense quota, soft delete), CRUD API, users management UI                                       | 1          | Not started | —                                                            |
+| 2 | Users           | Full user model (address, active flag, monthly expense quota, soft delete), CRUD API, users management UI                                       | 1          | Done        | [users](specs/2026-10-11-users-design.md), [plan](plans/2026-10-11-users.md) |
 | 3 | Expense Reports | Report entity, generated title "Prénom Nom - Mois Année", create from user + month (active users only), physical delete, reports list page       | 2          | Not started | —                                                            |
 | 4 | Expenses        | Expense entity and validation, monthly quota rule, edit, soft delete, report page with add form and expenses in pages of 5                     | 3          | Not started | —                                                            |
 | 5 | Wrap-up         | Final "Mes Notes", polish, private GitHub repo + invite `n2jsoft-hr-cr`                                                                            | 4          | Not started | —                                                            |
@@ -28,11 +28,13 @@ These are decided in the Foundation spec; slices follow them unless their own sp
 
 - **Layers:** `Domain ← Application ← Infrastructure`, `WebApi` is the composition root. Enforced by
   architecture tests.
-- **Lightweight CQRS, no mediator:** one command handler per write use case (loads entities through
-  write-side repositories, calls domain methods, saves through `IUnitOfWork`); read side is query
-  interfaces declared in Application and implemented in Infrastructure as `AsNoTracking` projections.
+- **Lightweight CQRS, no mediator:** one command handler per write use case (loads entities, calls domain
+  methods, saves). Data access goes through one **store per feature** (`I<Feature>Store` in Application,
+  implemented in Infrastructure over the scoped `AppDbContext`): reads are `AsNoTracking` projections, writes
+  are `FindAsync` / `Add` / `SaveChangesAsync`. No repository, no `IUnitOfWork`: the `DbContext` already is
+  the unit of work. (Decided in slice 2; supersedes the foundation spec.)
 - **Business rules live in Domain entities** and are unit-tested there or through the command
-  handlers. Queries hold no logic and are covered by the Acceptance tier.
+  handlers. Store reads hold no logic and are covered by the Acceptance tier.
 - **Errors:** request shape validated by .NET 10 built-in minimal-API validation (DataAnnotations → `400`).
   Request records must be declared `public`: the validation source generator silently skips other types.
   `NotFoundException` → `404`; `BusinessRuleViolationException` → `422` with a stable `code` extension
@@ -60,11 +62,7 @@ Ambiguities in the README to settle during each slice's brainstorm.
 
 ### Users
 
-- Postal address shape: street + postal code + city, or richer?
-- Is the monthly quota editable after creation? What does lowering it below the current month's count do?
-- What happens to an inactive or soft-deleted user's existing reports and expenses (still visible? still editable?)
-- Which management screens are expected (list, create, edit, activate/deactivate, delete)? The README
-  lists user attributes but names no user page.
+Settled in the [Users spec](specs/2026-10-11-users-design.md#decisions).
 
 ### Expense Reports
 

@@ -107,17 +107,17 @@ Réalisé :
   point de composition). La règle de dépendance (`Domain ← Application ← Infrastructure`) est vérifiée par des
   tests d'architecture. Les règles métier restent isolées et testables unitairement.
 - **CQRS léger, sans médiateur** : un handler par cas d'usage en écriture (à partir de la tranche 2) ; en
-  lecture, des interfaces de requêtes déclarées dans `Application` et implémentées par des projections EF Core
-  `AsNoTracking`. MediatR est devenu payant et n'apporte rien à cette taille de projet.
+  lecture, des projections EF Core `AsNoTracking`, servies depuis la tranche 2 par un « store » par
+  fonctionnalité (voir plus bas) plutôt que par des interfaces de requêtes. MediatR est devenu payant et
+  n'apporte rien à cette taille de projet.
 - **Listes paginées** côté API : `GET /v1/users?page=1&pageSize=20` (100 au plus) renvoie
-  `{ items, page, pageSize, totalCount }`. Le contrat `/v1` n'aura pas à changer quand le front ajoutera la
-  pagination.
+  `{ items, page, pageSize, totalCount }`.
 - **Versionnement d'API** par segment d'URL (`/v1/users`) avec `Asp.Versioning` : visible dans les URL et dans
   la documentation. Une version inconnue répond `404`.
 - **OpenAPI + Scalar** en développement uniquement : un document par version, et un lien « Scalar » sur la
   ressource `webapi` du dashboard Aspire.
 - **Contrat d'erreur unique** (RFC 9457 ProblemDetails) :
-  - `400` pour la validation ;
+  - `400` pour la validation, celle de la requête comme celle du domaine (`errors` indexé par champ) ;
   - `404` pour une ressource introuvable ;
   - `422` pour une règle métier violée, avec un `code` stable que le front traduit en français ;
   - `500` sans détail technique hors développement.
@@ -126,6 +126,39 @@ Réalisé :
   des utilisateurs (message d'erreur si l'API ne répond pas). Une URL inconnue ramène à cette liste.
 - **CI** : build et tests unitaires sur Ubuntu, Windows et macOS ; les tests qui ont besoin de Docker
   (acceptation, bout en bout) tournent sur Ubuntu uniquement.
+
+### Tranche 2 — Utilisateurs
+
+Réalisé :
+
+- **Modèle complet** : nom, prénom, adresse postale (rue, code postal à 5 chiffres, ville), quota mensuel de
+  dépenses, statut actif/inactif et suppression logique. Les règles sont portées par l'entité `User` et l'objet
+  valeur `Address`, testés unitairement.
+- **API** sous `/v1/users` : liste paginée, détail, création (`201` + `Location`), modification (`PUT`),
+  activation et désactivation (`POST …/activate`, `…/deactivate`, sans erreur si le statut est déjà le bon),
+  suppression logique (`DELETE`). Un utilisateur supprimé disparaît partout : toute requête le concernant répond
+  `404`.
+- **Concurrence optimiste** : le détail d'un utilisateur porte sa `version` (la colonne système `xmin` de
+  Postgres), aussi renvoyée en `ETag`. Un `PUT` avec `If-Match` est refusé en `412` si l'utilisateur a changé
+  depuis sa lecture ; le formulaire l'envoie toujours. Toute écriture enregistrée par-dessus une modification
+  concurrente répond `409`.
+- **Migration des données existantes** : les utilisateurs créés avant la tranche reçoivent une adresse à
+  compléter, le statut actif et un quota de 10, au lieu de valeurs que le domaine refuse.
+- **Accès aux données** : un « store » par fonctionnalité (`IUserStore` dans `Application`, implémenté sur le
+  `DbContext` dans `Infrastructure`) sert les lectures et les écritures. Pas de repository ni d'`IUnitOfWork` :
+  le `DbContext` est déjà une unité de travail. Un handler par cas d'usage en écriture.
+- **Front** : liste paginée (statut, activation, suppression avec confirmation) et formulaire de création et de
+  modification, avec des messages de validation en français.
+
+Hypothèses (le sujet ne précise pas) :
+
+- Le quota mensuel est un entier supérieur ou égal à 1, sans plafond. Il reste modifiable ; le baisser sous le
+  nombre de dépenses déjà saisies dans le mois ne touche pas l'existant et ne bloque que les nouvelles dépenses.
+- Longueurs maximales : 100 caractères pour le nom et le prénom, 200 pour la rue, 100 pour la ville. Elles sont
+  comptées avant le retrait des espaces en début et en fin, qui est ensuite appliqué.
+- Un utilisateur inactif reste visible et modifiable ; seul son rattachement à une nouvelle note de frais sera
+  refusé (tranche 3).
+- Un utilisateur supprimé ne peut pas être restauré.
 
 ### Lancer les tests
 
@@ -145,8 +178,8 @@ Réalisé :
 
 ### Pistes d'amélioration
 
-- Ajouter les contrôles de pagination à la liste des utilisateurs : elle n'affiche pour l'instant que la première
-  page (20 utilisateurs).
+- Ajouter l'authentification et l'autorisation : l'API et l'interface sont ouvertes, sans connexion. Le sujet décrit un
+  administrateur unique et ne prévoit pas de connexion.
 - Générer le client TypeScript à partir du document OpenAPI, au lieu de maintenir les interfaces à la main.
 - Passer le front en détection de changements sans zone.js (zoneless).
 - Supprimer le script `prestart: npm install` du front : Aspire 13.6 installe déjà les dépendances avant de

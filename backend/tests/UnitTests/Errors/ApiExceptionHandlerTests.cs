@@ -1,4 +1,5 @@
 using Application.Exceptions;
+using Domain.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using WebApi.Errors;
@@ -70,6 +71,54 @@ public sealed class ApiExceptionHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task InvalidValueException_is_written_as_a_400_validation_problem_keyed_by_the_parameter()
+    {
+        var context = ProblemDetailsTestContext.Create(_services);
+
+        var handled = await CreateHandler().TryHandleAsync(
+            context,
+            new InvalidValueException("street", "The value must not be blank."),
+            TestContext.Current.CancellationToken);
+
+        handled.ShouldBeTrue();
+        context.Response.StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
+        var body = await ProblemDetailsTestContext.ReadBodyAsync(context);
+        body.GetProperty("status").GetInt32().ShouldBe(400);
+        body.GetProperty("errors").GetProperty("street")[0].GetString().ShouldBe("The value must not be blank.");
+    }
+
+    [Fact]
+    public async Task ConcurrencyConflictException_is_written_as_a_409_problem()
+    {
+        var context = ProblemDetailsTestContext.Create(_services);
+
+        var handled = await CreateHandler().TryHandleAsync(
+            context,
+            new ConcurrencyConflictException("User", 42),
+            TestContext.Current.CancellationToken);
+
+        handled.ShouldBeTrue();
+        context.Response.StatusCode.ShouldBe(StatusCodes.Status409Conflict);
+        var body = await ProblemDetailsTestContext.ReadBodyAsync(context);
+        body.GetProperty("detail").GetString().ShouldBe("User '42' was changed by another request.");
+    }
+
+    [Fact]
+    public async Task ConcurrencyConflictException_is_written_as_a_412_problem_when_the_request_has_an_If_Match()
+    {
+        var context = ProblemDetailsTestContext.Create(_services);
+        context.Request.Headers.IfMatch = "\"7\"";
+
+        var handled = await CreateHandler().TryHandleAsync(
+            context,
+            new ConcurrencyConflictException("User", 42),
+            TestContext.Current.CancellationToken);
+
+        handled.ShouldBeTrue();
+        context.Response.StatusCode.ShouldBe(StatusCodes.Status412PreconditionFailed);
+    }
+
+    [Fact]
     public async Task BadHttpRequestException_is_written_with_its_own_status_code()
     {
         var context = ProblemDetailsTestContext.Create(_services);
@@ -83,6 +132,7 @@ public sealed class ApiExceptionHandlerTests : IDisposable
         context.Response.StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
         var body = await ProblemDetailsTestContext.ReadBodyAsync(context);
         body.GetProperty("status").GetInt32().ShouldBe(400);
+        body.GetProperty("detail").GetString().ShouldBe("Failed to read parameter.");
     }
 
     [Fact]
