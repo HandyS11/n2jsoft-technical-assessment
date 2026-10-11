@@ -8,8 +8,7 @@ otherwise here.
 
 After slice 1, `User` holds only `Id`, `FirstName` and `LastName`. The API exposes a paged
 `GET /v1/users` and the Angular shell shows the first page of names. There are no command handlers yet:
-the write side (`IUserRepository`, `IUnitOfWork`, `AddApplication()`) is created by this slice and becomes
-the template slices 3 and 4 copy.
+the write side is created by this slice and becomes the template slices 3 and 4 copy.
 
 The README requires that a user has a first name, a last name and a postal address; a maximum number of
 expenses per calendar month; an active/inactive state (only active users can be assigned to an expense
@@ -18,7 +17,8 @@ report); and can be deleted logically. It names no user page.
 ## Goals
 
 - Complete the `User` model: postal address, monthly expense quota, active flag, soft delete.
-- Introduce the write side (repository, unit of work, command handlers) following the foundation layout.
+- Introduce the write side (command handlers over a per-feature store) and replace the foundation's read-side
+  query interface with that same store.
 - Expose create, read, update, activate/deactivate and delete under `/v1/users`.
 - Give the administrator a French management UI: paged list, create/edit form, activation toggle, delete.
 
@@ -46,6 +46,7 @@ Open questions from the roadmap, settled during the brainstorm.
 | New users                                  | Created active                                                                                            | The common case; no extra form field                                                           |
 | Write API style                            | Task-based: `PUT` for details, `POST …/activate` and `…/deactivate`, `DELETE`                            | Rich entity with intention-revealing methods; the list toggle needs no full payload            |
 | Activating an active user (or vice versa) | Idempotent `204`, no error                                                                                 | Friendlier for a toggle; the README states no such rule                                        |
+| Data access (supersedes the foundation)    | One store per feature (`IUserStore` in Application, `UserStore(AppDbContext)` in Infrastructure) for reads and writes; no repository, no `IUnitOfWork`, no `IUserQueries` | The `DbContext` already is the unit of work; one typed facade per feature keeps Application free of EF Core |
 
 ## Domain
 
@@ -92,27 +93,45 @@ public sealed class User
 
 ## Application
 
-Following the foundation layout:
+This slice replaces the foundation's data-access convention (write-side repositories + `IUnitOfWork`, read-side
+query interfaces). The `DbContext` already is the unit of work, so each feature gets one **store**: an interface
+in Application, implemented in Infrastructure as a thin class over the scoped `AppDbContext`.
 
 ```text
 Application/
-  Abstractions/  IUserRepository.cs   Task<User?> FindAsync(Guid id, CancellationToken); void Add(User user)
-                 IUnitOfWork.cs       Task SaveChangesAsync(CancellationToken)
   Users/
-    Commands/    CreateUser.cs        CreateUserCommand + CreateUserHandler (returns the new id)
-                 UpdateUser.cs        UpdateUserCommand + UpdateUserHandler
-                 SetUserActivation.cs SetUserActivationCommand(Id, IsActive) + handler
-                 DeleteUser.cs        DeleteUserCommand + DeleteUserHandler (uses TimeProvider)
-    Queries/     IUserQueries.cs      ListAsync(PageRequest) ; FindAsync(Guid) → UserDetails?
-                 UserSummary.cs       (Id, Name, City, MonthlyExpenseQuota, IsActive)
-                 UserDetails.cs       (Id, FirstName, LastName, AddressDto Address, MonthlyExpenseQuota, IsActive)
-  DependencyInjection.cs              AddApplication(): registers the handlers and TimeProvider.System
+    IUserStore.cs        the feature's data access (below)
+    UserSummary.cs       (Id, Name, City, MonthlyExpenseQuota, IsActive)      moved from Users/Queries/
+    UserDetails.cs       (Id, FirstName, LastName, UserAddress Address, MonthlyExpenseQuota, IsActive)
+    Commands/  CreateUser.cs         CreateUserCommand + CreateUserHandler (returns the new id)
+               UpdateUser.cs         UpdateUserCommand + UpdateUserHandler
+               SetUserActivation.cs  SetUserActivationCommand(Id, IsActive) + handler
+               DeleteUser.cs         DeleteUserCommand + DeleteUserHandler (uses TimeProvider)
+  DependencyInjectionExtensions.cs   AddApplication(): registers the handlers and TimeProvider.System
+Infrastructure/
+  Users/UserStore.cs     replaces UserQueries.cs
 ```
 
+```csharp
+public interface IUserStore
+{
+    // Reads: AsNoTracking projections, no logic.
+    Task<PagedResult<UserSummary>> ListAsync(PageRequest request, CancellationToken cancellationToken);
+    Task<UserDetails?> GetDetailsAsync(Guid id, CancellationToken cancellationToken);
+
+    // Writes: tracked entities, changed through their domain methods.
+    Task<User?> FindAsync(Guid id, CancellationToken cancellationToken);
+    void Add(User user);
+    Task SaveChangesAsync(CancellationToken cancellationToken); // AppDbContext.SaveChangesAsync
+}
+```
+
+- Read endpoints call the store directly (`ListAsync`, `GetDetailsAsync`); write endpoints call a handler.
 - Commands carry the `Address` value object; the endpoint builds it from the validated request.
 - A handler whose `FindAsync` returns `null` throws `NotFoundException` and saves nothing.
-- `Infrastructure` implements `IUserRepository` and `IUnitOfWork` on `AppDbContext`, and extends
-  `UserQueries` (the list keeps its sort: last name, first name, id).
+- The list keeps its sort: last name, first name, id.
+- Stores are scoped and share the request's `AppDbContext`: when slice 4 changes two features in one use case,
+  one `SaveChangesAsync` commits both.
 
 ## API
 
@@ -158,8 +177,9 @@ Written test-first.
 - **Unit:**
   - `User`: creation, update, idempotent activation and deactivation, deletion date, and every guard.
   - `Address`: trimming and guards.
-  - Each handler: saves on success; throws `NotFoundException` without saving for an unknown id. Uses
-    NSubstitute and `FakeTimeProvider` (`Microsoft.Extensions.TimeProvider.Testing`).
+  - Each handler: saves on success; throws `NotFoundException` without saving for an unknown id. Uses an
+    NSubstitute `IUserStore` and `FakeTimeProvider` (`Microsoft.Extensions.TimeProvider.Testing`).
+  - The store holds no logic and is covered by the Acceptance tier.
 - **Acceptance:** `Users.feature` splits into `ListUsers`, `CreateUser`, `GetUser`, `UpdateUser`,
   `ChangeUserActivation` and `DeleteUser` features, reusing `ApiDriver` and `HttpSteps`. They cover every
   success path (including `201` with `Location`), a `400` outline (blank fields, bad postal code, quota 0,
@@ -191,7 +211,7 @@ The implementation plan starts with a spike for each; a failing spike changes th
   without ceiling, text lengths, soft delete hides users everywhere); the pagination item leaves
   "Pistes d'amélioration".
 - Roadmap: Users marked *Done* with links to this spec and its plan; its open questions replaced by a pointer
-  to the decisions above.
+  to the decisions above; the inherited data-access convention now describes the per-feature store.
 
 ## Definition of done
 

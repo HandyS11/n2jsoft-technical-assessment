@@ -28,11 +28,13 @@ These are decided in the Foundation spec; slices follow them unless their own sp
 
 - **Layers:** `Domain ← Application ← Infrastructure`, `WebApi` is the composition root. Enforced by
   architecture tests.
-- **Lightweight CQRS, no mediator:** one command handler per write use case (loads entities through
-  write-side repositories, calls domain methods, saves through `IUnitOfWork`); read side is query
-  interfaces declared in Application and implemented in Infrastructure as `AsNoTracking` projections.
+- **Lightweight CQRS, no mediator:** one command handler per write use case (loads entities, calls domain
+  methods, saves). Data access goes through one **store per feature** (`I<Feature>Store` in Application,
+  implemented in Infrastructure over the scoped `AppDbContext`): reads are `AsNoTracking` projections, writes
+  are `FindAsync` / `Add` / `SaveChangesAsync`. No repository, no `IUnitOfWork`: the `DbContext` already is
+  the unit of work. (Decided in slice 2; supersedes the foundation spec.)
 - **Business rules live in Domain entities** and are unit-tested there or through the command
-  handlers. Queries hold no logic and are covered by the Acceptance tier.
+  handlers. Store reads hold no logic and are covered by the Acceptance tier.
 - **Errors:** request shape validated by .NET 10 built-in minimal-API validation (DataAnnotations → `400`).
   Request records must be declared `public`: the validation source generator silently skips other types.
   `NotFoundException` → `404`; `BusinessRuleViolationException` → `422` with a stable `code` extension
