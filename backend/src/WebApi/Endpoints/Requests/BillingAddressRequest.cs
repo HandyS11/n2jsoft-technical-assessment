@@ -5,16 +5,16 @@ namespace WebApi.Endpoints.Requests;
 
 /// <summary>The store name is optional; the rest follows <see cref="AddressRequest" />.</summary>
 public sealed record BillingAddressRequest(
-    [property: StringLength(BillingAddress.StoreNameMaxLength)]
+    [property: TrimmedStringLength(BillingAddress.StoreNameMaxLength)]
     string? StoreName,
     [property: Required]
-    [property: StringLength(Address.StreetMaxLength)]
+    [property: TrimmedStringLength(Address.StreetMaxLength)]
     string Street,
     [property: Required]
     [property: RegularExpression("^[0-9]{5}$")]
     string PostalCode,
     [property: Required]
-    [property: StringLength(Address.CityMaxLength)]
+    [property: TrimmedStringLength(Address.CityMaxLength)]
     string City)
 {
     public BillingAddress ToBillingAddress()

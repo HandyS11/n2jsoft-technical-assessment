@@ -11,7 +11,7 @@ namespace WebApi.Endpoints.Requests;
 public sealed record SaveExpenseRequest(
     [property: Required] DateOnly? Date,
     [property: Required]
-    [property: StringLength(Expense.DescriptionMaxLength)]
+    [property: TrimmedStringLength(Expense.DescriptionMaxLength)]
     string Description,
     [property: Required]
     [property: Range(typeof(decimal), "0.01", "999999.99", ParseLimitsInInvariantCulture = true,

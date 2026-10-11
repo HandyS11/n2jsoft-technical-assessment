@@ -1,26 +1,19 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
-import {
-  AbstractControl,
-  NonNullableFormBuilder,
-  ReactiveFormsModule,
-  ValidationErrors,
-  Validators,
-} from '@angular/forms';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
+import { cityMaxLength, postalCodePattern, streetMaxLength } from '../../core/address-rules';
+import { maxTrimmedLength, requiredText } from '../../core/text-validators';
 import { SaveUser } from './user-details';
 import { UsersApi } from './users.api';
 
 /**
- * The API's limits (User.NameMaxLength, Address.StreetMaxLength, Address.CityMaxLength, the postal code and quota
- * rules), checked here first for immediate feedback. The API stays the authority: should the two differ, the fields it
+ * The API's limits (User.NameMaxLength, the quota rule and, from address-rules, the address ones), checked here first
+ * for immediate feedback. The API stays the authority: should the two differ, the fields it
  * rejects are flagged from its answer.
  */
 const nameMaxLength = 100;
-const streetMaxLength = 200;
-const cityMaxLength = 100;
-const postalCodePattern = /^[0-9]{5}$/;
 const minMonthlyExpenseQuota = 1;
 
 const fields = [
@@ -49,11 +42,6 @@ function rejectedFields(error: unknown): Field[] {
     const name = key.split('.').at(-1)?.toLowerCase();
     return fields.filter((field) => field.toLowerCase() === name);
   });
-}
-
-/** Like Validators.required, but text made only of spaces is missing too: the API would trim it to nothing. */
-function requiredText(control: AbstractControl<string>): ValidationErrors | null {
-  return control.value.trim() === '' ? { required: true } : null;
 }
 
 function isNotFound(error: unknown): boolean {
@@ -143,11 +131,11 @@ export default class UserFormPage {
 
   private readonly formBuilder = inject(NonNullableFormBuilder);
   protected readonly form = this.formBuilder.group({
-    firstName: ['', [requiredText, Validators.maxLength(nameMaxLength)]],
-    lastName: ['', [requiredText, Validators.maxLength(nameMaxLength)]],
-    street: ['', [requiredText, Validators.maxLength(streetMaxLength)]],
+    firstName: ['', [requiredText, maxTrimmedLength(nameMaxLength)]],
+    lastName: ['', [requiredText, maxTrimmedLength(nameMaxLength)]],
+    street: ['', [requiredText, maxTrimmedLength(streetMaxLength)]],
     postalCode: ['', [Validators.required, Validators.pattern(postalCodePattern)]],
-    city: ['', [requiredText, Validators.maxLength(cityMaxLength)]],
+    city: ['', [requiredText, maxTrimmedLength(cityMaxLength)]],
     monthlyExpenseQuota: this.formBuilder.control<number | null>(null, [
       Validators.required,
       Validators.min(minMonthlyExpenseQuota),

@@ -9,21 +9,20 @@ import {
   Validators,
 } from '@angular/forms';
 import { Observable } from 'rxjs';
+import { cityMaxLength, postalCodePattern, streetMaxLength } from '../../core/address-rules';
 import { businessRuleCode } from '../../core/problem-details';
+import { maxTrimmedLength, requiredText } from '../../core/text-validators';
 import { ExpenseDetails, SaveExpense } from './expense';
 import { ExpensesApi } from './expenses.api';
 
 /**
- * The API's limits (Expense.DescriptionMaxLength, MinAmount, MaxAmount, BillingAddress.StoreNameMaxLength and the
- * address rules), checked here first for immediate feedback. The API stays the authority.
+ * The API's limits (Expense.DescriptionMaxLength, MinAmount, MaxAmount, BillingAddress.StoreNameMaxLength and, from
+ * address-rules, the address ones), checked here first for immediate feedback. The API stays the authority.
  */
 const descriptionMaxLength = 50;
 const minAmount = 0.01;
 const maxAmount = 999_999.99;
 const storeNameMaxLength = 100;
-const streetMaxLength = 200;
-const cityMaxLength = 100;
-const postalCodePattern = /^[0-9]{5}$/;
 /** A positive number with at most two decimals, as the API stores it. */
 const amountPattern = /^[0-9]+(\.[0-9]{1,2})?$/;
 
@@ -38,11 +37,6 @@ const ruleMessages = new Map<string, string>([
     "L'utilisateur de cette note de frais a été supprimé : elle est en lecture seule.",
   ],
 ]);
-
-/** Like Validators.required, but text made only of spaces is missing too: the API would trim it to nothing. */
-function requiredText(control: AbstractControl<string>): ValidationErrors | null {
-  return control.value.trim() === '' ? { required: true } : null;
-}
 
 function twoDecimals(control: AbstractControl<number | null>): ValidationErrors | null {
   return control.value === null || amountPattern.test(String(control.value)) ? null : { decimals: true };
@@ -73,7 +67,7 @@ type Field = 'date' | 'description' | 'amount' | 'storeName' | 'street' | 'posta
 
       <label for="description">Description</label>
       <input id="description" formControlName="description" />
-      <p class="text-sm">{{ form.controls.description.value.length }}/{{ descriptionMaxLength }}</p>
+      <p class="text-sm">{{ form.controls.description.value.trim().length }}/{{ descriptionMaxLength }}</p>
       @if (errorFor('description'); as message) {
         <p class="field-error text-sm text-red-700">{{ message }}</p>
       }
@@ -161,17 +155,17 @@ export class ExpenseFormComponent {
   private readonly formBuilder = inject(NonNullableFormBuilder);
   protected readonly form = this.formBuilder.group({
     date: ['', [Validators.required, this.withinMonth]],
-    description: ['', [requiredText, Validators.maxLength(descriptionMaxLength)]],
+    description: ['', [requiredText, maxTrimmedLength(descriptionMaxLength)]],
     amount: this.formBuilder.control<number | null>(null, [
       Validators.required,
       Validators.min(minAmount),
       Validators.max(maxAmount),
       twoDecimals,
     ]),
-    storeName: ['', Validators.maxLength(storeNameMaxLength)],
-    street: ['', [requiredText, Validators.maxLength(streetMaxLength)]],
+    storeName: ['', maxTrimmedLength(storeNameMaxLength)],
+    street: ['', [requiredText, maxTrimmedLength(streetMaxLength)]],
     postalCode: ['', [Validators.required, Validators.pattern(postalCodePattern)]],
-    city: ['', [requiredText, Validators.maxLength(cityMaxLength)]],
+    city: ['', [requiredText, maxTrimmedLength(cityMaxLength)]],
   });
 
   constructor() {

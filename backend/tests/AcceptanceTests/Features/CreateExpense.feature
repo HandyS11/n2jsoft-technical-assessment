@@ -114,3 +114,14 @@ Feature: Add an expense to a report
       | billingAddress.street     | ""                                                      |
       | billingAddress.postalCode | "7500"                                                  |
       | billingAddress.city       | null                                                    |
+
+  Scenario Outline: The spaces around a <field> do not count towards its length
+    When I add an expense to "Juste Leblanc - Octobre 2025" whose <field> is <value>
+    Then the response status is 201
+
+    Examples:
+      | field                    | value |
+      | description              | " aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa " |
+      | billingAddress.storeName | " aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa " |
+      | billingAddress.street    | " aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa " |
+      | billingAddress.city      | " aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa " |
