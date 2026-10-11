@@ -46,7 +46,8 @@ These are decided in the Foundation spec; slices follow them unless their own sp
   save). The UI reads the code with `businessRuleCode` (`core/problem-details.ts`) and maps it to French.
 - **Rules over a count** (the monthly quota): the handler locks the parent row (`FOR UPDATE`) in its transaction
   before counting, and always locks in the same order (report, then user), so concurrent writes run one after the
-  other. The lock makes the outcome of a race certain, so it is tested with concurrent HTTP requests.
+  other. The race is tested with two concurrent HTTP requests while another connection holds the parent's lock, released
+  once both wait on it (`DatabaseLocks`): without the handler's lock, both would pass the count.
 - **API:** URL-segment versioning, all endpoints under `/v1/...`; the Angular app calls `/api/v1/...`
   through the dev proxy. Lists are paged: `?page=&pageSize=` (1-based, default 20, at most 100) returning
   `PagedResult<T>` (`items`, `page`, `pageSize`, `totalCount`).

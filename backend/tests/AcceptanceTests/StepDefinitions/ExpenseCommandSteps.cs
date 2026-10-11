@@ -51,17 +51,41 @@ public sealed class ExpenseCommandSteps(
         return AddAsync(Guid.NewGuid(), Request("2025-10-15", "Taxi"));
     }
 
+    /// <summary>
+    /// Another connection locks the report while both requests are sent, and releases it once both wait for a lock:
+    /// whatever their timing, they reach the database together. Only the report lock each one takes before counting
+    /// makes the second see the first one's expense; without it, both would count the same expenses and pass.
+    /// </summary>
     [When("two requests add an expense to {string} at the same time")]
     public async Task WhenTwoRequestsAddAnExpenseAtTheSameTimeAsync(string title)
     {
-        var path = ExpensePaths.Of(knownReports.IdOf(title));
+        var reportId = knownReports.IdOf(title);
+        var path = new Uri(ExpensePaths.Of(reportId), UriKind.Relative);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var connection = await TestEnvironment.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using (var lockReport = connection.CreateCommand())
+        {
+            lockReport.Transaction = transaction;
+            lockReport.CommandText = """SELECT 1 FROM expense_reports WHERE "Id" = @id FOR UPDATE""";
+            lockReport.Parameters.AddWithValue("id", reportId);
+            await lockReport.ExecuteScalarAsync(cancellationToken);
+        }
+
+        var release = ReleaseOnceBothWaitAsync();
         using var first = TestEnvironment.Factory.CreateClient();
         using var second = TestEnvironment.Factory.CreateClient();
-        var cancellationToken = TestContext.Current.CancellationToken;
         _concurrentResponses.AddRange(await Task.WhenAll(
-            first.PostAsJsonAsync(new Uri(path, UriKind.Relative), Request("2025-10-20", "First"), cancellationToken),
-            second.PostAsJsonAsync(new Uri(path, UriKind.Relative), Request("2025-10-21", "Second"),
-                cancellationToken)));
+            first.PostAsJsonAsync(path, Request("2025-10-20", "First"), cancellationToken),
+            second.PostAsJsonAsync(path, Request("2025-10-21", "Second"), cancellationToken)));
+        await release;
+        return;
+
+        async Task ReleaseOnceBothWaitAsync()
+        {
+            await DatabaseLocks.WaitUntilQueriesWaitForALockAsync(2, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
     }
 
     /// <summary>
