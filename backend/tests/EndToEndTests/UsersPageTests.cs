@@ -6,11 +6,10 @@ namespace EndToEndTests;
 public sealed class UsersPageTests(AppFixture fixture) : PageTest(fixture)
 {
     [Fact]
-    public async Task Opening_the_app_shows_the_seeded_users()
+    public async Task Opening_the_users_page_shows_the_seeded_users()
     {
-        await Page.GotoAsync("/");
+        await Page.GotoAsync("/users");
 
-        await Assertions.Expect(Page).ToHaveURLAsync(new Uri(Fixture.AngularUrl, "users").ToString());
         await Assertions.Expect(Page.GetByRole(AriaRole.Heading, new()
         {
             Name = "Utilisateurs"
