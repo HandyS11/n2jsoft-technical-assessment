@@ -14,6 +14,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<SetUserActivationHandler>();
         services.AddScoped<DeleteUserHandler>();
         services.AddScoped<CreateExpenseReportHandler>();
+        services.AddScoped<DeleteExpenseReportHandler>();
         return services;
     }
 }

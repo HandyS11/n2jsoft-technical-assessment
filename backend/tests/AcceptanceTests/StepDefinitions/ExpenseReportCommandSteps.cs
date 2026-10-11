@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using AcceptanceTests.Support;
+using Application.Exceptions;
 using Application.ExpenseReports;
 using Application.Users;
 using Domain.Entities;
@@ -41,6 +42,18 @@ public sealed class ExpenseReportCommandSteps(ApiDriver api, KnownUsers knownUse
         return CreateAsync(JsonRequests.With(Request(Guid.NewGuid(), 2025, 10), field, json));
     }
 
+    [When("I delete the expense report {string}")]
+    public Task WhenIDeleteTheExpenseReportAsync(string title)
+    {
+        return api.SendAsync(HttpMethod.Delete, $"{ExpenseReportsPath}/{knownReports.IdOf(title)}");
+    }
+
+    [When("I delete an unknown expense report")]
+    public Task WhenIDeleteAnUnknownExpenseReportAsync()
+    {
+        return api.SendAsync(HttpMethod.Delete, $"{ExpenseReportsPath}/{Guid.NewGuid()}");
+    }
+
     /// <summary>
     /// Both requests read (the user, then whether the report exists) before either saves, as when they run at the
     /// same time; the HTTP pipeline cannot interleave them deterministically, so this drives the stores directly.
@@ -60,6 +73,21 @@ public sealed class ExpenseReportCommandSteps(ApiDriver api, KnownUsers knownUse
             secondStore.SaveChangesAsync(TestContext.Current.CancellationToken));
     }
 
+    /// <summary>Both requests read the report before either saves, as when they run at the same time.</summary>
+    [When("two requests delete the expense report {string} at the same time")]
+    public async Task WhenTwoRequestsDeleteTheExpenseReportAtTheSameTimeAsync(string title)
+    {
+        var id = knownReports.IdOf(title);
+        using var first = TestEnvironment.Factory.Services.CreateScope();
+        using var second = TestEnvironment.Factory.Services.CreateScope();
+        var firstStore = await StageDeletionAsync(first, id);
+        var secondStore = await StageDeletionAsync(second, id);
+
+        await firstStore.SaveChangesAsync(TestContext.Current.CancellationToken);
+        _secondSaveFailure = await Record.ExceptionAsync(() =>
+            secondStore.SaveChangesAsync(TestContext.Current.CancellationToken));
+    }
+
     [Then("the response locates the created expense report")]
     public async Task ThenTheResponseLocatesTheCreatedExpenseReportAsync()
     {
@@ -71,6 +99,12 @@ public sealed class ExpenseReportCommandSteps(ApiDriver api, KnownUsers knownUse
     public void ThenTheSecondRequestIsRefusedAsADuplicate()
     {
         _secondSaveFailure.ShouldBeOfType<DuplicateExpenseReportException>();
+    }
+
+    [Then("the second request answers not found")]
+    public void ThenTheSecondRequestAnswersNotFound()
+    {
+        _secondSaveFailure.ShouldBeOfType<NotFoundException>();
     }
 
     private static JsonObject Request(Guid userId, int year, int month)
@@ -92,6 +126,15 @@ public sealed class ExpenseReportCommandSteps(ApiDriver api, KnownUsers knownUse
         var expenseReportStore = scope.ServiceProvider.GetRequiredService<IExpenseReportStore>();
         (await expenseReportStore.ExistsAsync(userId, period, cancellationToken)).ShouldBeFalse();
         expenseReportStore.Add(ExpenseReport.Create(user, period));
+        return expenseReportStore;
+    }
+
+    private static async Task<IExpenseReportStore> StageDeletionAsync(IServiceScope scope, Guid id)
+    {
+        var expenseReportStore = scope.ServiceProvider.GetRequiredService<IExpenseReportStore>();
+        var report = (await expenseReportStore.FindAsync(id, TestContext.Current.CancellationToken))
+            .ShouldNotBeNull();
+        expenseReportStore.Remove(report);
         return expenseReportStore;
     }
 

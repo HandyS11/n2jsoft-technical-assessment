@@ -25,6 +25,8 @@ internal static class ExpenseReportEndpoints
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        reports.MapDelete("/{id:guid}", DeleteExpenseReportAsync)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return endpoints;
     }
@@ -57,5 +59,14 @@ internal static class ExpenseReportEndpoints
     {
         var report = await handler.HandleAsync(request.ToCommand(), cancellationToken).ConfigureAwait(false);
         return TypedResults.Created(new Uri($"/v1/expense-reports/{report.Id}", UriKind.Relative), report);
+    }
+
+    private static async Task<NoContent> DeleteExpenseReportAsync(
+        Guid id,
+        DeleteExpenseReportHandler handler,
+        CancellationToken cancellationToken)
+    {
+        await handler.HandleAsync(new DeleteExpenseReportCommand(id), cancellationToken).ConfigureAwait(false);
+        return TypedResults.NoContent();
     }
 }

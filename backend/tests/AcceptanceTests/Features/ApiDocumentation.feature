@@ -40,6 +40,7 @@ Feature: API documentation
       | post   | /v1/expense-reports       | 400    |
       | post   | /v1/expense-reports       | 404    |
       | post   | /v1/expense-reports       | 422    |
+      | delete | /v1/expense-reports/{id}  | 404    |
 
   Scenario: The Scalar reference is served in Development
     Given the API runs in the Development environment

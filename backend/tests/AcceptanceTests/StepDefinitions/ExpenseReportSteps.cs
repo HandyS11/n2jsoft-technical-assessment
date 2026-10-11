@@ -100,4 +100,13 @@ public sealed class ExpenseReportSteps(ApiDriver api, KnownUsers knownUsers, Kno
             () => report.UserId.ShouldBe(knownUsers.IdOf(expected["User"])),
             () => Months.Format(report.Year, report.Month).ShouldBe(expected["Month"]));
     }
+
+    [Then("the expense report {string} is no longer stored")]
+    public async Task ThenTheExpenseReportIsNoLongerStoredAsync(string title)
+    {
+        var id = knownReports.IdOf(title);
+        using var scope = TestEnvironment.Factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await dbContext.Set<ExpenseReport>().AnyAsync(report => report.Id == id)).ShouldBeFalse();
+    }
 }

@@ -17,12 +17,18 @@ public interface IExpenseReportStore
 
     Task<bool> ExistsAsync(Guid userId, ReportMonth period, CancellationToken cancellationToken);
 
+    /// <summary>The tracked report, to delete; null when unknown.</summary>
+    Task<ExpenseReport?> FindAsync(Guid id, CancellationToken cancellationToken);
+
     void Add(ExpenseReport report);
+
+    void Remove(ExpenseReport report);
 
     /// <summary>
     /// Saves every change of the request, whatever store made it (they share one DbContext). Throws
     /// <see cref="Domain.Exceptions.DuplicateExpenseReportException" /> when a concurrent request created the same
-    /// user's report for the same month first.
+    /// user's report for the same month first, and <see cref="Exceptions.NotFoundException" /> when a concurrent
+    /// request deleted a removed report first.
     /// </summary>
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

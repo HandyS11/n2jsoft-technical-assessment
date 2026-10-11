@@ -1,3 +1,4 @@
+using Application.Exceptions;
 using Application.ExpenseReports;
 using Application.Paging;
 using Domain.Entities;
@@ -49,9 +50,19 @@ internal sealed class ExpenseReportStore(AppDbContext dbContext) : IExpenseRepor
             cancellationToken);
     }
 
+    public Task<ExpenseReport?> FindAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return dbContext.Set<ExpenseReport>().SingleOrDefaultAsync(report => report.Id == id, cancellationToken);
+    }
+
     public void Add(ExpenseReport report)
     {
         dbContext.Set<ExpenseReport>().Add(report);
+    }
+
+    public void Remove(ExpenseReport report)
+    {
+        dbContext.Set<ExpenseReport>().Remove(report);
     }
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
@@ -59,6 +70,12 @@ internal sealed class ExpenseReportStore(AppDbContext dbContext) : IExpenseRepor
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            // Reports are never updated: a row that was not there to delete was deleted by another request.
+            var entry = exception.Entries[0];
+            throw new NotFoundException(entry.Metadata.ClrType.Name, entry.Property("Id").CurrentValue!, exception);
         }
         catch (DbUpdateException exception) when (IsDuplicateReport(exception))
         {
