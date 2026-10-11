@@ -9,6 +9,7 @@ Feature: API documentation
     Examples:
       | path                      |
       | /v1/users                 |
+      | /v1/users/active          |
       | /v1/users/{id}            |
       | /v1/users/{id}/activate   |
       | /v1/users/{id}/deactivate |
@@ -23,6 +24,7 @@ Feature: API documentation
     Examples:
       | method | path                      | status |
       | get    | /v1/users                 | 400    |
+      | get    | /v1/users/active          | 400    |
       | get    | /v1/users/{id}            | 404    |
       | post   | /v1/users                 | 400    |
       | put    | /v1/users/{id}            | 400    |

@@ -4,6 +4,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { CursorPage } from '../../core/cursor-page';
 import { PagedResult } from '../../core/paged-result';
 import { SaveUser, UserDetails } from './user-details';
 import { UserSummary } from './user-summary';
@@ -26,12 +27,8 @@ const justeSummary: UserSummary = {
 };
 const marcSummary: UserSummary = { ...justeSummary, id: '2', name: 'Marc Assin', city: 'Lyon' };
 
-function activePage(
-  items: UserSummary[],
-  page: number,
-  totalCount: number
-): PagedResult<UserSummary> {
-  return { items, page, pageSize: 100, totalCount };
+function activeSlice(items: UserSummary[], next: string | null): CursorPage<UserSummary> {
+  return { items, next };
 }
 
 describe('UsersApi', () => {
@@ -130,47 +127,35 @@ describe('UsersApi', () => {
     request.flush(null, { status: 204, statusText: 'No Content' });
   });
 
-  it('lists only the active users with ?isActive=true', () => {
-    api.list(1, 20, true).subscribe();
-
-    const request = http.expectOne('/api/v1/users?page=1&pageSize=20&isActive=true');
-    expect(request.request.method).toBe('GET');
-    request.flush(activePage([], 1, 0));
-  });
-
-  it('reads every page of active users, 100 at a time', () => {
+  it('reads every slice of active users, 100 at a time, each starting where the previous one ended', () => {
     let result: UserSummary[] | undefined;
 
     api.listAllActive().subscribe((value) => (result = value));
 
     http
-      .expectOne('/api/v1/users?page=1&pageSize=100&isActive=true')
-      .flush(activePage([justeSummary], 1, 101));
+      .expectOne('/api/v1/users/active?pageSize=100')
+      .flush(activeSlice([justeSummary], 'after-juste'));
     http
-      .expectOne('/api/v1/users?page=2&pageSize=100&isActive=true')
-      .flush(activePage([marcSummary], 2, 101));
+      .expectOne('/api/v1/users/active?pageSize=100&after=after-juste')
+      .flush(activeSlice([marcSummary], null));
     expect(result).toEqual([justeSummary, marcSummary]);
   });
 
-  it('asks for one page only when every active user fits in it', () => {
+  it('asks for one slice only when every active user fits in it', () => {
     let result: UserSummary[] | undefined;
 
     api.listAllActive().subscribe((value) => (result = value));
 
-    http
-      .expectOne('/api/v1/users?page=1&pageSize=100&isActive=true')
-      .flush(activePage([justeSummary], 1, 1));
+    http.expectOne('/api/v1/users/active?pageSize=100').flush(activeSlice([justeSummary], null));
     expect(result).toEqual([justeSummary]);
   });
 
-  it('stops at an empty page, even when the total says there are more', () => {
+  it('reads no user when none is active', () => {
     let result: UserSummary[] | undefined;
 
     api.listAllActive().subscribe((value) => (result = value));
 
-    http
-      .expectOne('/api/v1/users?page=1&pageSize=100&isActive=true')
-      .flush(activePage([], 1, 250));
+    http.expectOne('/api/v1/users/active?pageSize=100').flush(activeSlice([], null));
     expect(result).toEqual([]);
   });
 });

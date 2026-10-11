@@ -21,6 +21,8 @@ internal static class UserEndpoints
 
         users.MapGet("/", ListUsersAsync)
             .ProducesValidationProblem();
+        users.MapGet("/active", ListActiveUsersAsync)
+            .ProducesValidationProblem();
         users.MapGet("/{id:guid}", GetUserAsync)
             .ProducesProblem(StatusCodes.Status404NotFound);
         users.MapPost("/", CreateUserAsync)
@@ -54,6 +56,26 @@ internal static class UserEndpoints
     {
         var users = await userStore.ListAsync(new PageRequest(page, pageSize), isActive, cancellationToken)
             .ConfigureAwait(false);
+        return TypedResults.Ok(users);
+    }
+
+    /// <summary>
+    /// Every active user, read slice by slice: <c>after</c> is the <c>next</c> of the previous slice. Unlike pages, the
+    /// slices neither skip nor repeat a user when others are activated, deactivated or deleted between two reads.
+    /// </summary>
+    private static async Task<Ok<CursorPage<UserSummary>>> ListActiveUsersAsync(
+        IUserStore userStore,
+        CancellationToken cancellationToken,
+        string? after = null,
+        [Range(1, PageRequest.MaxPageSize)] int pageSize = PageRequest.DefaultPageSize)
+    {
+        UserCursor? cursor = null;
+        if (after is not null && !UserCursor.TryParse(after, out cursor))
+        {
+            throw new BadHttpRequestException("after must be the next of a previous slice.");
+        }
+
+        var users = await userStore.ListActiveAsync(cursor, pageSize, cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok(users);
     }
 

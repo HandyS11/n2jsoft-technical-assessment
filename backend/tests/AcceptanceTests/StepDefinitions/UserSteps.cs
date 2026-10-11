@@ -16,6 +16,12 @@ public sealed class UserSteps(ApiDriver api, KnownUsers knownUsers)
 {
     private const string UsersPath = "/v1/users";
 
+    /// <summary>The names of the active users read so far, slice after slice.</summary>
+    private readonly List<string> _activeUsersRead = [];
+
+    /// <summary>Where the next slice of active users starts; null once the last one was read.</summary>
+    private string? _nextActiveUsers;
+
     /// <summary>
     /// "First name" and "Last name" are required. "Street", "Postal code", "City" and "Monthly quota" default to valid
     /// values; "Status" is Active (default), Inactive or Deleted.
@@ -58,6 +64,34 @@ public sealed class UserSteps(ApiDriver api, KnownUsers knownUsers)
     public Task WhenIListAPageOfTheUsersAsync(int page, int pageSize)
     {
         return api.GetAsync($"{UsersPath}?page={page}&pageSize={pageSize}");
+    }
+
+    [When("I read the active users {int} at a time")]
+    public async Task WhenIReadTheActiveUsersAtATimeAsync(int pageSize)
+    {
+        await WhenIReadTheFirstActiveUsersAsync(pageSize);
+        // Bounded: a cursor that never ends must fail the scenario, not hang it.
+        var slices = 1;
+        while (_nextActiveUsers is not null)
+        {
+            (++slices).ShouldBeLessThan(100);
+            await WhenIReadTheNextActiveUsersAsync(pageSize);
+        }
+    }
+
+    [When("I read the first {int} active users")]
+    public Task WhenIReadTheFirstActiveUsersAsync(int pageSize)
+    {
+        _activeUsersRead.Clear();
+        return ReadActiveUsersAsync($"{UsersPath}/active?pageSize={pageSize}");
+    }
+
+    [When("I read the next {int} active users")]
+    public Task WhenIReadTheNextActiveUsersAsync(int pageSize)
+    {
+        var after = _nextActiveUsers.ShouldNotBeNull();
+        return ReadActiveUsersAsync(
+            $"{UsersPath}/active?pageSize={pageSize}&after={Uri.EscapeDataString(after)}");
     }
 
     [When("I get the user {string}")]
@@ -105,6 +139,12 @@ public sealed class UserSteps(ApiDriver api, KnownUsers knownUsers)
         users.TotalCount.ShouldBe(totalCount);
     }
 
+    [Then("the active users read are")]
+    public void ThenTheActiveUsersReadAre(DataTable table)
+    {
+        _activeUsersRead.ShouldBe(table.Rows.Select(row => row["Name"]));
+    }
+
     [Then("the user returned is")]
     public async Task ThenTheUserReturnedIsAsync(DataTable table)
     {
@@ -135,6 +175,15 @@ public sealed class UserSteps(ApiDriver api, KnownUsers knownUsers)
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var user = await dbContext.Set<User>().IgnoreQueryFilters().SingleAsync(stored => stored.Id == id);
         user.DeletedAt.ShouldNotBeNull();
+    }
+
+    private async Task ReadActiveUsersAsync(string path)
+    {
+        await api.GetAsync(path);
+        api.Response.EnsureSuccessStatusCode();
+        var users = await api.ReadJsonAsync<CursorPage<UserSummary>>();
+        _activeUsersRead.AddRange(users.Items.Select(user => user.Name));
+        _nextActiveUsers = users.Next;
     }
 
     private static User ToUser(DataTableRow row)

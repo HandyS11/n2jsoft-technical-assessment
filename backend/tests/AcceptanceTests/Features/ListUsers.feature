@@ -74,3 +74,52 @@ Feature: List users
       | isActive | name          |
       | true     | Juste Leblanc |
       | false    | Marc Assin    |
+
+  Scenario: Reading the active users slice by slice returns each of them once, in name order
+    Given the following users exist
+      | First name | Last name | Status   |
+      | Juste      | Leblanc   | Active   |
+      | Marc       | Assin     | Active   |
+      | Albert     | Leblanc   | Active   |
+      | Zoé        | Zola      | Inactive |
+      | Paul       | Abel      | Deleted  |
+    When I read the active users 2 at a time
+    Then the active users read are
+      | Name           |
+      | Marc Assin     |
+      | Albert Leblanc |
+      | Juste Leblanc  |
+
+  Scenario Outline: A user <change> between two slices makes the next one neither skip nor repeat the others
+    Given the following users exist
+      | First name | Last name | Status   |
+      | Marc       | Assin     | Active   |
+      | Albert     | Leblanc   | Active   |
+      | Juste      | Leblanc   | Active   |
+      | Zoé        | Zola      | Active   |
+      | Paul       | Abel      | Inactive |
+    When I read the first 2 active users
+    And I <action> the user "<user>"
+    And I read the next 2 active users
+    Then the active users read are
+      | Name           |
+      | Marc Assin     |
+      | Albert Leblanc |
+      | Juste Leblanc  |
+      | Zoé Zola       |
+
+    Examples:
+      | change                      | action     | user       |
+      | already read is deactivated | deactivate | Marc Assin |
+      | sorted before is activated  | activate   | Paul Abel  |
+
+  Scenario Outline: Reading the active users rejects an invalid slice
+    When I request "/v1/users/active?<query>"
+    Then the response is a problem with status 400
+
+    Examples:
+      | query               |
+      | pageSize=0          |
+      | pageSize=101        |
+      | after=not-a-cursor  |
+      | after=bnVsbA        |

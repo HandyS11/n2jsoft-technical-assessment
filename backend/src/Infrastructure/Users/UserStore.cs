@@ -39,6 +39,47 @@ internal sealed class UserStore(AppDbContext dbContext) : IUserStore
         return new PagedResult<UserSummary>(items, request.Page, request.PageSize, totalCount);
     }
 
+    public async Task<CursorPage<UserSummary>> ListActiveAsync(
+        UserCursor? after,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var users = dbContext.Set<User>().AsNoTracking().Where(user => user.IsActive);
+        if (after is not null)
+        {
+            // A row comparison: everything sorted after the last user read, whether that user still exists or not.
+            users = users.Where(user => EF.Functions.GreaterThan(
+                ValueTuple.Create(user.LastName, user.FirstName, user.Id),
+                ValueTuple.Create(after.LastName, after.FirstName, after.Id)));
+        }
+
+        var rows = await users
+            .OrderBy(user => user.LastName)
+            .ThenBy(user => user.FirstName)
+            .ThenBy(user => user.Id)
+            // One more than asked tells whether there is a next page.
+            .Take(pageSize + 1)
+            .Select(user => new
+            {
+                user.LastName,
+                user.FirstName,
+                Summary = new UserSummary(
+                    user.Id,
+                    $"{user.FirstName} {user.LastName}",
+                    user.Address.City,
+                    user.MonthlyExpenseQuota,
+                    user.IsActive),
+            })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var page = rows.Take(pageSize).ToList();
+        var next = rows.Count > pageSize
+            ? new UserCursor(page[^1].LastName, page[^1].FirstName, page[^1].Summary.Id).ToString()
+            : null;
+        return new CursorPage<UserSummary>(page.ConvertAll(row => row.Summary), next);
+    }
+
     public Task<UserDetails?> GetDetailsAsync(Guid id, CancellationToken cancellationToken)
     {
         return dbContext.Set<User>()

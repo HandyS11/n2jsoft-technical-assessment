@@ -12,6 +12,16 @@ public interface IUserStore
     /// <summary>Every user when <paramref name="isActive" /> is null, otherwise only the active or the inactive ones.</summary>
     Task<PagedResult<UserSummary>> ListAsync(PageRequest request, bool? isActive, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Up to <paramref name="pageSize" /> active users in the order of <see cref="ListAsync" />, the first ones
+    /// after <paramref name="after" /> (from the start when null). Users activated, deactivated or deleted between
+    /// two reads cannot make the next one skip or repeat the others, as an offset would.
+    /// </summary>
+    Task<CursorPage<UserSummary>> ListActiveAsync(
+        UserCursor? after,
+        int pageSize,
+        CancellationToken cancellationToken);
+
     Task<UserDetails?> GetDetailsAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>The tracked user, to change through its domain methods; null when unknown or deleted.</summary>
