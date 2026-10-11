@@ -17,6 +17,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<CreateExpenseReportHandler>();
         services.AddScoped<DeleteExpenseReportHandler>();
         services.AddScoped<CreateExpenseHandler>();
+        services.AddScoped<UpdateExpenseHandler>();
         return services;
     }
 }

@@ -32,6 +32,14 @@ public sealed class ExpenseHandlerContext
     public IExpenseStore ExpenseStore { get; } = Substitute.For<IExpenseStore>();
     public InlineTransactionRunner Transactions { get; } = new();
 
+    /// <summary>An expense of the report, found by the expense store.</summary>
+    public Expense AddStoredExpense()
+    {
+        var expense = Expense.Create(Report, User, 0, October15, "Taxi", 10m, Fnac);
+        ExpenseStore.FindAsync(Report.Id, expense.Id, Arg.Any<CancellationToken>()).Returns(expense);
+        return expense;
+    }
+
     /// <summary>The report's user was deleted: the user's query filter hides them from the locking read.</summary>
     public void DeleteTheUser()
     {

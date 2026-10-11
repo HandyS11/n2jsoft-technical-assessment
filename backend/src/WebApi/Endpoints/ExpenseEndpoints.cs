@@ -5,6 +5,7 @@ using Application.Expenses;
 using Application.Expenses.Commands;
 using Application.Paging;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using WebApi.Endpoints.Requests;
 
 namespace WebApi.Endpoints;
@@ -26,6 +27,14 @@ internal static class ExpenseEndpoints
         expenses.MapPost("/", CreateExpenseAsync)
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        // 409: another request saved the expense while this one was changing it. 412: the expense changed since the
+        // version given in If-Match.
+        expenses.MapPut("/{id:guid}", UpdateExpenseAsync)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status412PreconditionFailed)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         return endpoints;
@@ -83,5 +92,31 @@ internal static class ExpenseEndpoints
         response.Headers.ETag = EntityTags.Of(expense.Version);
         return TypedResults.Created(
             new Uri($"/v1/expense-reports/{reportId}/expenses/{expense.Id}", UriKind.Relative), expense);
+    }
+
+    /// <summary>
+    /// A full replacement. With If-Match set to the expense's version (its ETag), the update is refused with 412 when
+    /// the expense changed since it was read; without it, the update overwrites whatever is stored.
+    /// </summary>
+    private static async Task<NoContent> UpdateExpenseAsync(
+        Guid reportId,
+        Guid id,
+        SaveExpenseRequest request,
+        UpdateExpenseHandler handler,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        CancellationToken cancellationToken)
+    {
+        await handler.HandleAsync(
+                new UpdateExpenseCommand(
+                    reportId,
+                    id,
+                    request.Date!.Value,
+                    request.Description,
+                    request.Amount!.Value,
+                    request.BillingAddress.ToBillingAddress(),
+                    EntityTags.ExpectedVersionOf(ifMatch)),
+                cancellationToken)
+            .ConfigureAwait(false);
+        return TypedResults.NoContent();
     }
 }

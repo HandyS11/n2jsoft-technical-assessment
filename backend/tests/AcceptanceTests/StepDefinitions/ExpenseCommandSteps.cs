@@ -17,6 +17,8 @@ public sealed class ExpenseCommandSteps(
     /// <summary>The answers to requests sent at the same time, in no particular order.</summary>
     private readonly List<HttpResponseMessage> _concurrentResponses = [];
 
+    private string? _entityTagRead;
+
     /// <summary>
     /// "Date" and "Description" are required; "Amount" (10.00), "Store" (none), "Street", "Postal code" and "City"
     /// default to valid values.
@@ -84,6 +86,52 @@ public sealed class ExpenseCommandSteps(
         await DatabaseLocks.WaitUntilAQueryWaitsForALockAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         await addition;
+    }
+
+    [When("I update the expense {string} with")]
+    public Task WhenIUpdateTheExpenseWithAsync(string description, DataTable table)
+    {
+        var (reportId, id) = knownExpenses.Of(description);
+        return api.SendAsync(HttpMethod.Put, ExpensePaths.Of(reportId, id),
+            ToRequest(table.Rows.ShouldHaveSingleItem()));
+    }
+
+    [When("I update the expense {string} to the date {string}")]
+    public Task WhenIUpdateTheExpenseToTheDateAsync(string description, string date)
+    {
+        var (reportId, id) = knownExpenses.Of(description);
+        return api.SendAsync(HttpMethod.Put, ExpensePaths.Of(reportId, id), Request(date, description));
+    }
+
+    [When(@"^I update the expense ""([^""]+)"" whose (\S+) is (.+)$")]
+    public Task WhenIUpdateTheExpenseWhoseFieldIsAsync(string description, string field, string json)
+    {
+        var (reportId, id) = knownExpenses.Of(description);
+        return api.SendAsync(HttpMethod.Put, ExpensePaths.Of(reportId, id),
+            JsonRequests.With(Request("2025-10-15", description), field, json));
+    }
+
+    [When("I update an unknown expense of {string}")]
+    public Task WhenIUpdateAnUnknownExpenseOfAsync(string title)
+    {
+        return api.SendAsync(HttpMethod.Put, ExpensePaths.Of(knownReports.IdOf(title), Guid.NewGuid()),
+            Request("2025-10-15", "Taxi"));
+    }
+
+    [When("I read the expense {string}")]
+    public async Task WhenIReadTheExpenseAsync(string description)
+    {
+        var (reportId, id) = knownExpenses.Of(description);
+        await api.GetAsync(ExpensePaths.Of(reportId, id));
+        _entityTagRead = api.Response.Headers.ETag.ShouldNotBeNull().ToString();
+    }
+
+    [When("I update the expense {string} with the ETag read")]
+    public Task WhenIUpdateTheExpenseWithTheETagReadAsync(string description)
+    {
+        var (reportId, id) = knownExpenses.Of(description);
+        return api.SendAsync(HttpMethod.Put, ExpensePaths.Of(reportId, id), Request("2025-10-16", description),
+            _entityTagRead.ShouldNotBeNull());
     }
 
     [Then("the response locates the created expense")]
