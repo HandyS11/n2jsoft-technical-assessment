@@ -48,6 +48,9 @@ Feature: API documentation
       | get    | /v1/expense-reports/{reportId}/expenses      | 400    |
       | get    | /v1/expense-reports/{reportId}/expenses      | 404    |
       | get    | /v1/expense-reports/{reportId}/expenses/{id} | 404    |
+      | post   | /v1/expense-reports/{reportId}/expenses      | 400    |
+      | post   | /v1/expense-reports/{reportId}/expenses      | 404    |
+      | post   | /v1/expense-reports/{reportId}/expenses      | 422    |
 
   Scenario: The v1 OpenAPI document describes the active filter of the users list
     Given the API runs in the Development environment

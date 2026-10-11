@@ -22,6 +22,19 @@ Feature: List the expenses of a report
       | 2025-10-15 | Taxi        | 23.50  |
     And the listing reports 2 expenses in total
 
+  Scenario: Expenses of the same day keep the order they were added in
+    When I add the following expense to "Juste Leblanc - Octobre 2025"
+      | Date       | Description |
+      | 2025-10-15 | Petit-déj   |
+    And I add the following expense to "Juste Leblanc - Octobre 2025"
+      | Date       | Description |
+      | 2025-10-15 | Déjeuner    |
+    And I list the expenses of "Juste Leblanc - Octobre 2025"
+    Then the expenses listed are
+      | Date       | Description | Amount |
+      | 2025-10-15 | Petit-déj   | 10.00  |
+      | 2025-10-15 | Déjeuner    | 10.00  |
+
   Scenario: Listing returns the requested page of 5 and the total number of expenses
     Given the following expenses exist in "Juste Leblanc - Octobre 2025"
       | Date       | Description |

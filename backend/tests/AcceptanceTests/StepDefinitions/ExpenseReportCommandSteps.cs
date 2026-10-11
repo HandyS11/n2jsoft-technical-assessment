@@ -205,26 +205,9 @@ public sealed class ExpenseReportCommandSteps(ApiDriver api, KnownUsers knownUse
         }
 
         var creation = CreateAsync(Request(userId, period.Year, period.Month));
-        await WaitUntilAQueryWaitsForALockAsync(cancellationToken);
+        await DatabaseLocks.WaitUntilAQueryWaitsForALockAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         await creation;
-    }
-
-    /// <summary>
-    /// On a connection of its own: within a transaction, Postgres keeps answering the activity it saw first.
-    /// </summary>
-    private static async Task WaitUntilAQueryWaitsForALockAsync(CancellationToken cancellationToken)
-    {
-        await using var connection = await TestEnvironment.OpenConnectionAsync();
-        await using var query = connection.CreateCommand();
-        query.CommandText =
-            "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'";
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(10));
-        while ((long)(await query.ExecuteScalarAsync(timeout.Token))! == 0)
-        {
-            await Task.Delay(TimeSpan.FromMilliseconds(20), timeout.Token);
-        }
     }
 
     private async Task CreateAsync(JsonObject request)
