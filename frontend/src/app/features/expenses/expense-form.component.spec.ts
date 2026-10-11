@@ -179,6 +179,17 @@ describe('ExpenseFormComponent', () => {
       expect(form.api.create).not.toHaveBeenCalled();
     });
 
+    it('requires a five-digit postal code', () => {
+      const form = render();
+      form.fillValid();
+      form.type('postalCode', '7500');
+
+      form.submit();
+
+      expect(form.fieldErrors()).toEqual(['Le code postal doit comporter 5 chiffres.']);
+      expect(form.api.create).not.toHaveBeenCalled();
+    });
+
     it('accepts the largest amount', () => {
       const form = render();
       form.fillValid();
@@ -230,6 +241,18 @@ describe('ExpenseFormComponent', () => {
       form.submit();
 
       expect(form.alert()).toBe('Note de frais introuvable.');
+    });
+
+    it('says so when the API rejects the details', () => {
+      const api = fakeApi();
+      api.create.mockImplementation(() => httpError(400));
+      const form = render({ api });
+      form.fillValid();
+
+      form.submit();
+
+      expect(form.alert()).toBe('Les informations saisies sont invalides.');
+      expect(form.saved).not.toHaveBeenCalled();
     });
 
     it('says so when the server fails', () => {

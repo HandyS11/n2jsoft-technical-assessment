@@ -392,6 +392,16 @@ describe('ExpenseReportPage', () => {
       expect(api.get).toHaveBeenCalledTimes(2);
     });
 
+    it('goes back to adding an expense once the one being edited is deleted', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const page = await render();
+      await page.click(page.button('Modifier', page.rows()[0]));
+
+      await page.click(page.button('Supprimer', page.rows()[0]));
+
+      expect(text(page.form()?.querySelector('h2'))).toBe('Nouvelle dépense');
+    });
+
     it('keeps the expense when the deletion is cancelled', async () => {
       vi.spyOn(window, 'confirm').mockReturnValue(false);
       const expensesApi = fakeExpensesApi();
