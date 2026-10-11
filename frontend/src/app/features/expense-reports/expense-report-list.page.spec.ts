@@ -30,12 +30,16 @@ const october: ExpenseReportSummary = {
   title: 'Juste Leblanc - Octobre 2025',
   year: 2025,
   month: 10,
+  expenseCount: 3,
+  total: 1234.5,
 };
 const september: ExpenseReportSummary = {
   id: '2',
   title: 'Juste Leblanc - Septembre 2025',
   year: 2025,
   month: 9,
+  expenseCount: 0,
+  total: 0,
 };
 const monthMessage = 'Indiquez un mois au format AAAA-MM, entre 2000-01 et 2100-12.';
 const inactiveUserMessage = 'Cet utilisateur est inactif : il ne peut pas être affecté à une note de frais.';
@@ -62,7 +66,17 @@ function fakeReportsApi(
     list: vi.fn(list),
     create: vi.fn(
       (): Observable<ExpenseReportDetails> =>
-        of({ id: '9', title: 'Juste Leblanc - Octobre 2025', userId: 'u1', year: 2025, month: 10 })
+        of({
+          id: '9',
+          title: 'Juste Leblanc - Octobre 2025',
+          userId: 'u1',
+          year: 2025,
+          month: 10,
+          expenseCount: 0,
+          total: 0,
+          monthlyExpenseQuota: 5,
+          isReadOnly: false,
+        })
     ),
     delete: vi.fn((): Observable<void> => of(undefined)),
   };

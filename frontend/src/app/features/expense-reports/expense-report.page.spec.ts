@@ -18,6 +18,10 @@ const october: ExpenseReportDetails = {
   userId: 'u1',
   year: 2025,
   month: 10,
+  expenseCount: 3,
+  total: 1234.5,
+  monthlyExpenseQuota: 10,
+  isReadOnly: false,
 };
 
 function httpError(status: number): Observable<never> {
