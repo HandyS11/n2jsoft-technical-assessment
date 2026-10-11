@@ -33,7 +33,7 @@ namespace Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_expense_reports_UserId_Month",
+                name: "IX_expense_reports_UserId_Year_Month",
                 table: "expense_reports",
                 columns: new[] { "UserId", "Year", "Month" },
                 unique: true);

@@ -50,7 +50,7 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId", "Year", "Month")
                         .IsUnique()
-                        .HasDatabaseName("IX_expense_reports_UserId_Month");
+                        .HasDatabaseName("IX_expense_reports_UserId_Year_Month");
 
                     b.ToTable("expense_reports", (string)null);
                 });

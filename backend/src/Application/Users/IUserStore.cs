@@ -17,12 +17,19 @@ public interface IUserStore
     /// <summary>The tracked user, to change through its domain methods; null when unknown or deleted.</summary>
     Task<User?> FindAsync(Guid id, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// <see cref="FindAsync" />, but the user stays locked until the transaction ends: a change to it saved by another
+    /// request waits until then, and one saved before is already seen. Only within
+    /// <see cref="Persistence.ITransactionRunner.RunAsync{T}" />.
+    /// </summary>
+    Task<User?> FindLockedAsync(Guid id, CancellationToken cancellationToken);
+
     void Add(User user);
 
     /// <summary>
     /// Saves every change of the request, whatever store made it (they share one DbContext); throws
     /// <see cref="Exceptions.ConcurrencyConflictException" /> when a changed user was saved by another request since
-    /// it was read.
+    /// it was read. A report's save fails as <see cref="ExpenseReports.IExpenseReportStore.SaveChangesAsync" /> says.
     /// </summary>
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

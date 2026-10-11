@@ -59,6 +59,14 @@ public static class TestEnvironment
         await _respawner.ResetAsync(connection);
     }
 
+    /// <summary>A connection of its own, outside the API: to hold a transaction open while the API works.</summary>
+    public static async Task<NpgsqlConnection> OpenConnectionAsync()
+    {
+        var connection = new NpgsqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        return connection;
+    }
+
     public static async Task StopAsync()
     {
         if (_developmentFactory is not null)

@@ -7,6 +7,7 @@ using Domain.Entities;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using Reqnroll;
 
 namespace AcceptanceTests.StepDefinitions;
@@ -88,6 +89,45 @@ public sealed class ExpenseReportCommandSteps(ApiDriver api, KnownUsers knownUse
             secondStore.SaveChangesAsync(TestContext.Current.CancellationToken));
     }
 
+    /// <summary>
+    /// Both requests read the user before either saves; the second saves through the expense report store, as a
+    /// handler that also adds a report would.
+    /// </summary>
+    [When(
+        "two requests deactivate the user {string} at the same time, the second saving through the expense report store")]
+    public async Task WhenTwoRequestsDeactivateTheUserAtTheSameTimeAsync(string name)
+    {
+        var id = knownUsers.IdOf(name);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var first = TestEnvironment.Factory.Services.CreateScope();
+        using var second = TestEnvironment.Factory.Services.CreateScope();
+        var firstUserStore = first.ServiceProvider.GetRequiredService<IUserStore>();
+        var firstUser = (await firstUserStore.FindAsync(id, cancellationToken)).ShouldNotBeNull();
+        var secondUser =
+            (await second.ServiceProvider.GetRequiredService<IUserStore>().FindAsync(id, cancellationToken))
+            .ShouldNotBeNull();
+
+        firstUser.Deactivate();
+        await firstUserStore.SaveChangesAsync(cancellationToken);
+        secondUser.Deactivate();
+        _secondSaveFailure = await Record.ExceptionAsync(() =>
+            second.ServiceProvider.GetRequiredService<IExpenseReportStore>().SaveChangesAsync(cancellationToken));
+    }
+
+    [When("the user {string} is deactivated while an expense report is created for them for {string}")]
+    public Task WhenTheUserIsDeactivatedWhileAnExpenseReportIsCreatedAsync(string name, string month)
+    {
+        return ChangeTheUserWhileCreatingAsync(name, month,
+            update => update.CommandText = """UPDATE users SET "IsActive" = false WHERE "Id" = @id""");
+    }
+
+    [When("the user {string} is deleted while an expense report is created for them for {string}")]
+    public Task WhenTheUserIsDeletedWhileAnExpenseReportIsCreatedAsync(string name, string month)
+    {
+        return ChangeTheUserWhileCreatingAsync(name, month,
+            update => update.CommandText = """UPDATE users SET "DeletedAt" = now() WHERE "Id" = @id""");
+    }
+
     [Then("the response locates the created expense report")]
     public async Task ThenTheResponseLocatesTheCreatedExpenseReportAsync()
     {
@@ -99,6 +139,12 @@ public sealed class ExpenseReportCommandSteps(ApiDriver api, KnownUsers knownUse
     public void ThenTheSecondRequestIsRefusedAsADuplicate()
     {
         _secondSaveFailure.ShouldBeOfType<DuplicateExpenseReportException>();
+    }
+
+    [Then("the second request is refused as a conflict")]
+    public void ThenTheSecondRequestIsRefusedAsAConflict()
+    {
+        _secondSaveFailure.ShouldBeOfType<ConcurrencyConflictException>();
     }
 
     [Then("the second request answers not found")]
@@ -136,6 +182,49 @@ public sealed class ExpenseReportCommandSteps(ApiDriver api, KnownUsers knownUse
             .ShouldNotBeNull();
         expenseReportStore.Remove(report);
         return expenseReportStore;
+    }
+
+    /// <summary>
+    /// Another connection changes the user (the @id of <paramref name="setUpdate" />) and holds its transaction open;
+    /// the creation, sent meanwhile, must wait for the commit and then see the change, rather than check the user as
+    /// it was before.
+    /// </summary>
+    private async Task ChangeTheUserWhileCreatingAsync(string name, string month, Action<NpgsqlCommand> setUpdate)
+    {
+        var userId = knownUsers.IdOf(name);
+        var period = Months.Parse(month);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var connection = await TestEnvironment.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using (var update = connection.CreateCommand())
+        {
+            update.Transaction = transaction;
+            setUpdate(update);
+            update.Parameters.AddWithValue("id", userId);
+            await update.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        var creation = CreateAsync(Request(userId, period.Year, period.Month));
+        await WaitUntilAQueryWaitsForALockAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        await creation;
+    }
+
+    /// <summary>
+    /// On a connection of its own: within a transaction, Postgres keeps answering the activity it saw first.
+    /// </summary>
+    private static async Task WaitUntilAQueryWaitsForALockAsync(CancellationToken cancellationToken)
+    {
+        await using var connection = await TestEnvironment.OpenConnectionAsync();
+        await using var query = connection.CreateCommand();
+        query.CommandText =
+            "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'";
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(10));
+        while ((long)(await query.ExecuteScalarAsync(timeout.Token))! == 0)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(20), timeout.Token);
+        }
     }
 
     private async Task CreateAsync(JsonObject request)

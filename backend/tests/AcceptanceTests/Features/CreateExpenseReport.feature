@@ -72,6 +72,24 @@ Feature: Create an expense report
     When I create an expense report for "Juste Leblanc" for "2025-10"
     Then the response is a business rule violation with the code "expense_report.inactive_user"
 
+  Scenario: A user deactivated while a report is created for them is not assigned it
+    Given the following users exist
+      | First name | Last name |
+      | Juste      | Leblanc   |
+    When the user "Juste Leblanc" is deactivated while an expense report is created for them for "2025-10"
+    Then the response is a business rule violation with the code "expense_report.inactive_user"
+    When I list the expense reports
+    Then the listing reports 0 expense reports in total
+
+  Scenario: A user deleted while a report is created for them is not assigned it
+    Given the following users exist
+      | First name | Last name |
+      | Juste      | Leblanc   |
+    When the user "Juste Leblanc" is deleted while an expense report is created for them for "2025-10"
+    Then the response is a problem with status 404
+    When I list the expense reports
+    Then the listing reports 0 expense reports in total
+
   Scenario: A deleted user cannot be assigned a report
     Given the following users exist
       | First name | Last name | Status  |

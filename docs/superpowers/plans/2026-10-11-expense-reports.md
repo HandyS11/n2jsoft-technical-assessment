@@ -27,10 +27,10 @@ as errors) and a real Postgres 18.3. No spike task remains.
    ("not a valid member access expression") and `HasIndex("UserId", "Month_Year", …)` (no such CLR property). The
    spec's fallback applies: `Year` and `Month` are plain `int` properties; `Period` is an unmapped getter
    (`new ReportMonth(Year, Month)`), which EF ignores without configuration. The generated migration creates
-   `expense_reports` with the unique index `IX_expense_reports_UserId_Month`.
+   `expense_reports` with the unique index `IX_expense_reports_UserId_Year_Month`.
 2. **Duplicate detection.** Saving a second report for the same user and month throws a `DbUpdateException` whose
    `InnerException` is a `PostgresException` with `SqlState == PostgresErrorCodes.UniqueViolation` (`23505`) and
-   `ConstraintName == "IX_expense_reports_UserId_Month"`. `AnyAsync` on `UserId`/`Year`/`Month` and the sort on them
+   `ConstraintName == "IX_expense_reports_UserId_Year_Month"`. `AnyAsync` on `UserId`/`Year`/`Month` and the sort on them
    translate; a report of a soft-deleted user still loads (no join); `Remove` + `SaveChangesAsync` deletes it.
 
 The production backend code of Tasks 1–5 (Domain, Application, Infrastructure, WebApi) was compiled in that worktree
@@ -559,7 +559,7 @@ README.md, docs/superpowers/roadmap.md                                          
     `static ExpenseReportDetails From(ExpenseReport report)`.
   - `IExpenseReportStore` with `ListAsync(PageRequest, CancellationToken)` and `GetDetailsAsync(Guid,
     CancellationToken)` (Tasks 3 and 4 add the write members).
-  - `ExpenseReportEntityTypeConfiguration.UserAndMonthIndexName = "IX_expense_reports_UserId_Month"` (internal).
+  - `ExpenseReportEntityTypeConfiguration.UserYearAndMonthIndexName = "IX_expense_reports_UserId_Year_Month"` (internal).
   - `GET /v1/expense-reports` and `GET /v1/expense-reports/{id}`; `ExpenseReportEndpoints.MapExpenseReportEndpoints`.
   - Acceptance: `KnownExpenseReports` (`Add(title, id)`, `IdOf(title)`), `Months.Parse("2025-10")` →
     `ReportMonth`, `Months.Format(year, month)` → `"2025-10"`; steps "the following expense reports exist", "I list
@@ -939,7 +939,7 @@ README.md, docs/superpowers/roadmap.md                                          
   internal sealed class ExpenseReportEntityTypeConfiguration : IEntityTypeConfiguration<ExpenseReport>
   {
       /// <summary>The store recognises a duplicate report by the name of the index it violates.</summary>
-      public const string UserAndMonthIndexName = "IX_expense_reports_UserId_Month";
+      public const string UserYearAndMonthIndexName = "IX_expense_reports_UserId_Year_Month";
 
       public void Configure(EntityTypeBuilder<ExpenseReport> builder)
       {
@@ -955,7 +955,7 @@ README.md, docs/superpowers/roadmap.md                                          
                   report.UserId, report.Year, report.Month
               })
               .IsUnique()
-              .HasDatabaseName(UserAndMonthIndexName);
+              .HasDatabaseName(UserYearAndMonthIndexName);
       }
   }
   ```
@@ -1100,7 +1100,7 @@ README.md, docs/superpowers/roadmap.md                                          
 
   Expected: `Done.` The migration creates `expense_reports` (`Id` uuid, `UserId` uuid, `Year` integer, `Month`
   integer, `Title` character varying(250)), the foreign key `FK_expense_reports_users_UserId` with
-  `ReferentialAction.Restrict`, and the unique index `IX_expense_reports_UserId_Month` on
+  `ReferentialAction.Restrict`, and the unique index `IX_expense_reports_UserId_Year_Month` on
   `UserId, Year, Month`. Keep it as generated.
 
 - [ ] **Step 10: Run the backend tiers**
@@ -1144,7 +1144,7 @@ README.md, docs/superpowers/roadmap.md                                          
 
 - Consumes: Task 1's `ExpenseReport.Create`, `ReportMonth`, `DuplicateExpenseReportException`,
   `InactiveUserException`; Task 2's `IExpenseReportStore`, `ExpenseReportDetails.From`,
-  `ExpenseReportEntityTypeConfiguration.UserAndMonthIndexName`, `KnownExpenseReports`, `Months`. Existing
+  `ExpenseReportEntityTypeConfiguration.UserYearAndMonthIndexName`, `KnownExpenseReports`, `Months`. Existing
   `IUserStore.FindAsync` and the internal `UserStoreExtensions.GetAsync(this IUserStore, Guid, CancellationToken)`
   (throws `NotFoundException`).
 - Produces:
@@ -1395,7 +1395,7 @@ README.md, docs/superpowers/roadmap.md                                          
           return exception.InnerException is PostgresException
           {
               SqlState: PostgresErrorCodes.UniqueViolation,
-              ConstraintName: ExpenseReportEntityTypeConfiguration.UserAndMonthIndexName,
+              ConstraintName: ExpenseReportEntityTypeConfiguration.UserYearAndMonthIndexName,
           };
       }
   ```

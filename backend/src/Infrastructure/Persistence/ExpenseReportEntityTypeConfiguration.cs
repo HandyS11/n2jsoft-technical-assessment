@@ -7,7 +7,7 @@ namespace Infrastructure.Persistence;
 internal sealed class ExpenseReportEntityTypeConfiguration : IEntityTypeConfiguration<ExpenseReport>
 {
     /// <summary>The store recognises a duplicate report by the name of the index it violates.</summary>
-    public const string UserAndMonthIndexName = "IX_expense_reports_UserId_Month";
+    public const string UserYearAndMonthIndexName = "IX_expense_reports_UserId_Year_Month";
 
     public void Configure(EntityTypeBuilder<ExpenseReport> builder)
     {
@@ -23,6 +23,6 @@ internal sealed class ExpenseReportEntityTypeConfiguration : IEntityTypeConfigur
                 report.UserId, report.Year, report.Month
             })
             .IsUnique()
-            .HasDatabaseName(UserAndMonthIndexName);
+            .HasDatabaseName(UserYearAndMonthIndexName);
     }
 }

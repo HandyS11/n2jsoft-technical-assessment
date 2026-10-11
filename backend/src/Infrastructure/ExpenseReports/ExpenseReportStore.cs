@@ -1,12 +1,9 @@
-using Application.Exceptions;
 using Application.ExpenseReports;
 using Application.Paging;
 using Domain.Entities;
-using Domain.Exceptions;
 using Domain.ValueObjects;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace Infrastructure.ExpenseReports;
 
@@ -65,31 +62,8 @@ internal sealed class ExpenseReportStore(AppDbContext dbContext) : IExpenseRepor
         dbContext.Set<ExpenseReport>().Remove(report);
     }
 
-    public async Task SaveChangesAsync(CancellationToken cancellationToken)
+    public Task SaveChangesAsync(CancellationToken cancellationToken)
     {
-        try
-        {
-            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException exception)
-        {
-            // Reports are never updated: a row that was not there to delete was deleted by another request.
-            var entry = exception.Entries[0];
-            throw new NotFoundException(entry.Metadata.ClrType.Name, entry.Property("Id").CurrentValue!, exception);
-        }
-        catch (DbUpdateException exception) when (IsDuplicateReport(exception))
-        {
-            // Another request created the same report between ExistsAsync and this save.
-            throw new DuplicateExpenseReportException(exception);
-        }
-    }
-
-    private static bool IsDuplicateReport(DbUpdateException exception)
-    {
-        return exception.InnerException is PostgresException
-        {
-            SqlState: PostgresErrorCodes.UniqueViolation,
-            ConstraintName: ExpenseReportEntityTypeConfiguration.UserAndMonthIndexName,
-        };
+        return dbContext.SaveChangesAsync(cancellationToken);
     }
 }

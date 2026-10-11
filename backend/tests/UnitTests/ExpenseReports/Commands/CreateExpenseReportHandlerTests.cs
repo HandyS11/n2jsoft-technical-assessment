@@ -1,6 +1,7 @@
 using Application.Exceptions;
 using Application.ExpenseReports;
 using Application.ExpenseReports.Commands;
+using Application.Persistence;
 using Application.Users;
 using Domain.Entities;
 using Domain.Exceptions;
@@ -17,11 +18,30 @@ public sealed class CreateExpenseReportHandlerTests
     private readonly User _juste =
         User.Create("Juste", "Leblanc", new Address("12 rue de Rivoli", "75001", "Paris"), 10);
 
+    private readonly ITransactionRunner _transactions = Substitute.For<ITransactionRunner>();
     private readonly IUserStore _userStore = Substitute.For<IUserStore>();
+
+    /// <summary>Whether the handler's work is running inside <see cref="ITransactionRunner.RunAsync{T}" />.</summary>
+    private bool _inTransaction;
 
     public CreateExpenseReportHandlerTests()
     {
-        _userStore.FindAsync(_juste.Id, Arg.Any<CancellationToken>()).Returns(_juste);
+        _userStore.FindLockedAsync(_juste.Id, Arg.Any<CancellationToken>()).Returns(_juste);
+        _transactions
+            .RunAsync(Arg.Any<Func<CancellationToken, Task<ExpenseReportDetails>>>(), Arg.Any<CancellationToken>())
+            .Returns(async call =>
+            {
+                _inTransaction = true;
+                try
+                {
+                    return await call.Arg<Func<CancellationToken, Task<ExpenseReportDetails>>>()(
+                        call.Arg<CancellationToken>());
+                }
+                finally
+                {
+                    _inTransaction = false;
+                }
+            });
     }
 
     [Fact]
@@ -42,6 +62,33 @@ public sealed class CreateExpenseReportHandlerTests
             _expenseReportStore.Add(added);
             _ = _expenseReportStore.SaveChangesAsync(Arg.Any<CancellationToken>());
         });
+    }
+
+    [Fact]
+    public async Task Locks_the_user_and_saves_within_one_transaction()
+    {
+        var lockedInTransaction = false;
+        var savedInTransaction = false;
+        _userStore.FindLockedAsync(_juste.Id, Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                lockedInTransaction = _inTransaction;
+                return _juste;
+            });
+        _expenseReportStore.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                savedInTransaction = _inTransaction;
+                return Task.CompletedTask;
+            });
+
+        await CreateHandler().HandleAsync(
+            new CreateExpenseReportCommand(_juste.Id, October2025),
+            TestContext.Current.CancellationToken);
+
+        lockedInTransaction.ShouldBeTrue();
+        savedInTransaction.ShouldBeTrue();
+        await _userStore.DidNotReceive().FindAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -99,7 +146,7 @@ public sealed class CreateExpenseReportHandlerTests
 
     private CreateExpenseReportHandler CreateHandler()
     {
-        return new CreateExpenseReportHandler(_userStore, _expenseReportStore);
+        return new CreateExpenseReportHandler(_transactions, _userStore, _expenseReportStore);
     }
 
     private async Task ShouldNotHaveSavedAsync()

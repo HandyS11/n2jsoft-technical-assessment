@@ -1,4 +1,5 @@
 using Application.ExpenseReports;
+using Application.Persistence;
 using Application.Users;
 using Infrastructure.ExpenseReports;
 using Infrastructure.Persistence;
@@ -18,6 +19,7 @@ public static class DependencyInjectionExtensions
                 options.UseAsyncSeeding(async (context, _, cancellationToken) =>
                     await AppDbContext.SeedAsync(context, cancellationToken).ConfigureAwait(false)));
 
+        builder.Services.AddScoped<ITransactionRunner, TransactionRunner>();
         builder.Services.AddScoped<IUserStore, UserStore>();
         builder.Services.AddScoped<IExpenseReportStore, ExpenseReportStore>();
 

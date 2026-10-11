@@ -40,3 +40,10 @@ Feature: Activate and deactivate a user
       | action     |
       | activate   |
       | deactivate |
+
+  Scenario: A user saved by another request since it was read is a conflict, whichever store saves it
+    Given the following users exist
+      | First name | Last name |
+      | Juste      | Leblanc   |
+    When two requests deactivate the user "Juste Leblanc" at the same time, the second saving through the expense report store
+    Then the second request is refused as a conflict

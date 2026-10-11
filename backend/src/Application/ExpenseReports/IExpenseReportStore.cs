@@ -28,7 +28,8 @@ public interface IExpenseReportStore
     /// Saves every change of the request, whatever store made it (they share one DbContext). Throws
     /// <see cref="Domain.Exceptions.DuplicateExpenseReportException" /> when a concurrent request created the same
     /// user's report for the same month first, and <see cref="Exceptions.NotFoundException" /> when a concurrent
-    /// request deleted a removed report first.
+    /// request deleted a removed report first. A user's save fails as
+    /// <see cref="Users.IUserStore.SaveChangesAsync" /> says.
     /// </summary>
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }
