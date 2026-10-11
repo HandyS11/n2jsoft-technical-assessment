@@ -160,6 +160,34 @@ Hypothèses (le sujet ne précise pas) :
   refusé (tranche 3).
 - Un utilisateur supprimé ne peut pas être restauré.
 
+### Tranche 3 — Notes de frais
+
+Réalisé :
+
+- **Modèle** : une note de frais (`ExpenseReport`) appartient à un utilisateur et couvre un mois (`ReportMonth`, de
+  janvier 2000 à décembre 2100). Son intitulé, « Prénom Nom - Mois Année » (par ex. « Juste Leblanc - Octobre
+  2025 »), est composé et enregistré à la création, puis ne change plus. Les noms de mois sont écrits en dur, avec
+  leur majuscule, pour ne dépendre ni de la culture `fr-FR` ni de la présence d'ICU sur le serveur.
+- **Règles métier**, premières réponses `422` (avec un `code` que le front traduit) : seul un utilisateur actif peut
+  être affecté à une note de frais (`expense_report.inactive_user`) ; un utilisateur a au plus une note de frais par
+  mois (`expense_report.already_exists`). Cette seconde règle est vérifiée avant l'enregistrement et garantie par un
+  index unique : deux créations simultanées donnent une note et un `422`, jamais une erreur `500`.
+- **API** sous `/v1/expense-reports` : liste paginée (le mois le plus récent d'abord), détail, création (`201` +
+  `Location`) et suppression physique (`DELETE` ; `404` si la note a déjà été supprimée, y compris par une requête
+  simultanée). `GET /v1/users` accepte un filtre `isActive`.
+- **Front** : la page des notes de frais, devenue la page d'accueil, permet d'en créer une en choisissant un
+  utilisateur actif et un mois (le mois courant par défaut), puis ouvre la note créée. Elle liste les notes par pages
+  de 20, avec suppression après confirmation. La page d'une note affiche son intitulé et son mois et permet de la
+  supprimer ; ses dépenses arrivent avec la tranche 4.
+
+Hypothèses (le sujet ne précise pas) :
+
+- Un utilisateur a au plus une note de frais par mois.
+- L'intitulé est figé à la création : renommer l'utilisateur ne le change pas.
+- Les mois acceptés vont de janvier 2000 à décembre 2100, passés comme à venir.
+- Supprimer une note de frais supprimera aussi ses dépenses (tranche 4).
+- Les notes de frais d'un utilisateur supprimé restent visibles, avec leur intitulé d'origine.
+
 ### Lancer les tests
 
 | Niveau                                      | Commande                                                   | Prérequis       |
@@ -186,3 +214,5 @@ Hypothèses (le sujet ne précise pas) :
   lancer l'application.
 - Ajouter un health check Aspire sur `webapi`. Il sonde l'endpoint https, et échoue donc tant que le certificat
   de développement ASP.NET Core n'est pas approuvé (c'est le cas en CI) : le front attendrait indéfiniment.
+- Mutualiser la pagination des listes (utilisateurs, notes de frais) dans un composant partagé : la logique est
+  aujourd'hui dupliquée dans les deux pages.
