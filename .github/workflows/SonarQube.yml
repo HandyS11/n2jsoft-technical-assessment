@@ -52,7 +52,9 @@ jobs:
       - name: Restore tools
         run: dotnet tool restore
 
-      # The .NET scanner also analyses the files outside the MSBuild projects: the frontend, the workflows
+      # The .NET scanner also analyses the files outside the MSBuild projects: the frontend, the workflows.
+      # Out of the coverage: the tests; the code that only runs in the real app (Aspire host, Angular bootstrap, tool
+      # configs); QueryFilters, whose constants compile to no code that a test could run.
       - name: Begin analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -66,7 +68,7 @@ jobs:
           /d:sonar.cs.vscoveragexml.reportsPaths="artifacts/coverage/*.coverage.xml"
           /d:sonar.javascript.lcov.reportPaths="frontend/coverage/n2f/lcov.info"
           /d:sonar.exclusions="frontend/coverage/**,**/Migrations/**"
-          /d:sonar.coverage.exclusions="backend/tests/**,frontend/**/*.spec.ts"
+          /d:sonar.coverage.exclusions="backend/tests/**,frontend/**/*.spec.ts,tools/**,frontend/*.js,frontend/src/main.ts,frontend/src/test-setup.ts,backend/src/Infrastructure/Persistence/QueryFilters.cs"
           /d:sonar.cpd.exclusions="**/Migrations/**"
 
       - name: Build
