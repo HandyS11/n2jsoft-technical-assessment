@@ -48,21 +48,25 @@ function pageCountOf(page: PagedResult<unknown>): number {
                 <td>{{ user.isActive ? 'Actif' : 'Inactif' }}</td>
                 <td class="flex gap-3">
                   <a [routerLink]="['/users', user.id, 'edit']" class="underline">Modifier</a>
-                  <button type="button" (click)="toggle(user)">
+                  <button type="button" [disabled]="busy()" (click)="toggle(user)">
                     {{ user.isActive ? 'Désactiver' : 'Activer' }}
                   </button>
-                  <button type="button" (click)="remove(user)">Supprimer</button>
+                  <button type="button" [disabled]="busy()" (click)="remove(user)">Supprimer</button>
                 </td>
               </tr>
             }
           </tbody>
         </table>
         <nav aria-label="Pagination" class="mt-4 flex items-center gap-4">
-          <button type="button" [disabled]="page.page <= 1" (click)="load(page.page - 1)">
+          <button type="button" [disabled]="busy() || page.page <= 1" (click)="load(page.page - 1)">
             Précédent
           </button>
           <span>Page {{ page.page }} sur {{ pageCount() }}</span>
-          <button type="button" [disabled]="page.page >= pageCount()" (click)="load(page.page + 1)">
+          <button
+            type="button"
+            [disabled]="busy() || page.page >= pageCount()"
+            (click)="load(page.page + 1)"
+          >
             Suivant
           </button>
         </nav>
@@ -79,6 +83,8 @@ export default class UserListPage {
   protected readonly page = signal<PagedResult<UserSummary> | undefined>(undefined);
   protected readonly failed = signal(false);
   protected readonly actionFailed = signal(false);
+  /** An action runs, until the page reloaded after it shows: a second click would act on a stale row. */
+  protected readonly busy = signal(false);
   protected readonly pageCount = computed(() => {
     const page = this.page();
     return page ? pageCountOf(page) : 1;
@@ -94,6 +100,7 @@ export default class UserListPage {
           this.api.list(pageNumber, pageSize).pipe(
             catchError(() => {
               this.failed.set(true);
+              this.busy.set(false);
               return EMPTY;
             })
           )
@@ -118,6 +125,7 @@ export default class UserListPage {
     }
     this.page.set(page);
     this.failed.set(false);
+    this.busy.set(false);
   }
 
   protected toggle(user: UserSummary): void {
@@ -131,6 +139,7 @@ export default class UserListPage {
   }
 
   private run(action: Observable<void>): void {
+    this.busy.set(true);
     this.actionFailed.set(false);
     action.subscribe({
       next: () => this.load(this.page()?.page ?? 1),

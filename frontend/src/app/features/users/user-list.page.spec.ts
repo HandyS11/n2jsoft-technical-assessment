@@ -48,9 +48,23 @@ function render(api: ReturnType<typeof fakeApi>) {
   const fixture = TestBed.createComponent(UserListPage);
   fixture.detectChanges();
   const element = fixture.nativeElement as HTMLElement;
+  const button = (label: string, rowIndex?: number) => {
+    const scope =
+      rowIndex === undefined
+        ? element
+        : element.querySelectorAll('tbody tr')[rowIndex];
+    const found = Array.from(scope.querySelectorAll('button')).find(
+      (candidate) => candidate.textContent?.trim() === label
+    );
+    if (!found) {
+      throw new Error(`No button "${label}"`);
+    }
+    return found;
+  };
 
   return {
     element,
+    button,
     detectChanges: () => fixture.detectChanges(),
     rows: () =>
       Array.from(element.querySelectorAll('tbody tr')).map((row) =>
@@ -59,17 +73,7 @@ function render(api: ReturnType<typeof fakeApi>) {
           .map((cell) => cell.textContent?.trim())
       ),
     click: (label: string, rowIndex?: number) => {
-      const scope =
-        rowIndex === undefined
-          ? element
-          : element.querySelectorAll('tbody tr')[rowIndex];
-      const button = Array.from(scope.querySelectorAll('button')).find(
-        (candidate) => candidate.textContent?.trim() === label
-      );
-      if (!button) {
-        throw new Error(`No button "${label}"`);
-      }
-      button.click();
+      button(label, rowIndex).click();
       fixture.detectChanges();
     },
   };
@@ -251,6 +255,26 @@ describe('UserListPage', () => {
 
     expect(page.rows()).toEqual([['Juste Leblanc', 'Paris', '10', 'Actif']]);
     expect(page.element.textContent).toContain('Page 1 sur 3');
+  });
+
+  it('disables the actions until the page reloaded after one shows', () => {
+    const action = new Subject<void>();
+    const api = fakeApi(() => of(pageOf([juste], 1, 45)));
+    api.deactivate.mockImplementation(() => action);
+    const page = render(api);
+
+    page.click('Désactiver', 0);
+
+    expect(page.button('Désactiver', 0).disabled).toBe(true);
+    expect(page.button('Supprimer', 0).disabled).toBe(true);
+    expect(page.button('Suivant').disabled).toBe(true);
+
+    action.next();
+    page.detectChanges();
+
+    expect(page.button('Désactiver', 0).disabled).toBe(false);
+    expect(page.button('Supprimer', 0).disabled).toBe(false);
+    expect(page.button('Suivant').disabled).toBe(false);
   });
 
   it('says so when an action fails', () => {
