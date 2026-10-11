@@ -1,3 +1,4 @@
+import { CurrencyPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -57,7 +58,7 @@ function isUnavailableUser(error: unknown): boolean {
 
 @Component({
   selector: 'app-expense-report-list-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [CurrencyPipe, ReactiveFormsModule, RouterLink],
   template: `
     <h1 class="mb-4 text-2xl font-semibold">Notes de frais</h1>
 
@@ -112,6 +113,8 @@ function isUnavailableUser(error: unknown): boolean {
           <thead>
             <tr>
               <th>Intitulé</th>
+              <th>Dépenses</th>
+              <th>Total</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -121,6 +124,8 @@ function isUnavailableUser(error: unknown): boolean {
                 <td>
                   <a [routerLink]="['/expense-reports', report.id]" class="underline">{{ report.title }}</a>
                 </td>
+                <td>{{ report.expenseCount }}</td>
+                <td>{{ report.total | currency: 'EUR' }}</td>
                 <td>
                   <button type="button" [disabled]="list.busy()" (click)="remove(report)">Supprimer</button>
                 </td>

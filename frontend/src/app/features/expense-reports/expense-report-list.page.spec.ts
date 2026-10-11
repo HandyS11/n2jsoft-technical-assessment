@@ -1,4 +1,7 @@
+import { registerLocaleData } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import localeFr from '@angular/common/locales/fr';
+import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -10,6 +13,8 @@ import { ExpenseReportDetails } from './expense-report-details';
 import ExpenseReportListPage from './expense-report-list.page';
 import { ExpenseReportSummary } from './expense-report-summary';
 import { ExpenseReportsApi } from './expense-reports.api';
+
+registerLocaleData(localeFr);
 
 const juste: UserSummary = {
   id: 'u1',
@@ -95,6 +100,7 @@ async function render(reportsApi = fakeReportsApi(), usersApi = fakeUsersApi()) 
       ]),
       { provide: ExpenseReportsApi, useValue: reportsApi },
       { provide: UsersApi, useValue: usersApi },
+      { provide: LOCALE_ID, useValue: 'fr-FR' },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -175,6 +181,15 @@ describe('ExpenseReportListPage', () => {
 
       expect(page.rows()).toEqual(['Juste Leblanc - Octobre 2025', 'Juste Leblanc - Septembre 2025']);
       expect(page.linkOf(0)).toBe('/expense-reports/1');
+    });
+
+    it('shows the number of expenses and the total of each report', async () => {
+      const page = await render();
+
+      const cells = Array.from(page.element().querySelectorAll('tbody tr')[0].querySelectorAll('td')).map((cell) =>
+        (cell.textContent ?? '').replace(/\s+/g, ' ').trim()
+      );
+      expect(cells.slice(0, 3)).toEqual(['Juste Leblanc - Octobre 2025', '3', '1 234,50 €']);
     });
 
     it('asks the API for the first page of 20 reports', async () => {
