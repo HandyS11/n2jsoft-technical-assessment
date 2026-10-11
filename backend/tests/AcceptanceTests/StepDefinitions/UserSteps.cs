@@ -3,6 +3,7 @@ using AcceptanceTests.Support;
 using Application.Paging;
 using Application.Users.Queries;
 using Domain.Entities;
+using Domain.ValueObjects;
 using Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Reqnroll;
@@ -19,10 +20,11 @@ public sealed class UserSteps(ApiDriver api)
     {
         using var scope = TestEnvironment.Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        dbContext.AddRange(table.Rows.Select(row => new User
-        {
-            FirstName = row["First name"], LastName = row["Last name"],
-        }));
+        dbContext.AddRange(table.Rows.Select(row => User.Create(
+            row["First name"],
+            row["Last name"],
+            new Address("1 rue de la Paix", "75002", "Paris"),
+            10)));
         await dbContext.SaveChangesAsync();
     }
 

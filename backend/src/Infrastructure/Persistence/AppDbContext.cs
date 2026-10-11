@@ -1,4 +1,5 @@
 using Domain.Entities;
+using Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence;
@@ -17,14 +18,8 @@ internal sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbC
         {
             await context.Set<User>().AddRangeAsync(
                 [
-                    new User
-                    {
-                        FirstName = "Juste", LastName = "Leblanc"
-                    },
-                    new User
-                    {
-                        FirstName = "Marc", LastName = "Assin"
-                    },
+                    User.Create("Juste", "Leblanc", new Address("12 rue de Rivoli", "75001", "Paris"), 10),
+                    User.Create("Marc", "Assin", new Address("3 place Bellecour", "69002", "Lyon"), 10),
                 ],
                 cancellationToken).ConfigureAwait(false);
             await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
