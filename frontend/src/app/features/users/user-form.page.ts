@@ -12,13 +12,44 @@ import { Observable } from 'rxjs';
 import { SaveUser } from './user-details';
 import { UsersApi } from './users.api';
 
-type Field =
-  | 'firstName'
-  | 'lastName'
-  | 'street'
-  | 'postalCode'
-  | 'city'
-  | 'monthlyExpenseQuota';
+/**
+ * The API's limits (User.NameMaxLength, Address.StreetMaxLength, Address.CityMaxLength, the postal code and quota
+ * rules), checked here first for immediate feedback. The API stays the authority: should the two differ, the fields it
+ * rejects are flagged from its answer.
+ */
+const nameMaxLength = 100;
+const streetMaxLength = 200;
+const cityMaxLength = 100;
+const postalCodePattern = /^[0-9]{5}$/;
+const minMonthlyExpenseQuota = 1;
+
+const fields = [
+  'firstName',
+  'lastName',
+  'street',
+  'postalCode',
+  'city',
+  'monthlyExpenseQuota',
+] as const;
+type Field = (typeof fields)[number];
+
+/**
+ * The fields named in a 400's validation errors. The API names them by path ("FirstName", "Address.PostalCode") or,
+ * for a rule its domain checks, by parameter ("street"): the last segment, whatever its case, is the field.
+ */
+function rejectedFields(error: unknown): Field[] {
+  if (!(error instanceof HttpErrorResponse) || error.status !== 400) {
+    return [];
+  }
+  const errors: unknown = (error.error as { errors?: unknown } | null)?.errors;
+  if (typeof errors !== 'object' || errors === null) {
+    return [];
+  }
+  return Object.keys(errors).flatMap((key) => {
+    const name = key.split('.').at(-1)?.toLowerCase();
+    return fields.filter((field) => field.toLowerCase() === name);
+  });
+}
 
 /** Like Validators.required, but text made only of spaces is missing too: the API would trim it to nothing. */
 function requiredText(control: AbstractControl<string>): ValidationErrors | null {
@@ -112,14 +143,14 @@ export default class UserFormPage {
 
   private readonly formBuilder = inject(NonNullableFormBuilder);
   protected readonly form = this.formBuilder.group({
-    firstName: ['', [requiredText, Validators.maxLength(100)]],
-    lastName: ['', [requiredText, Validators.maxLength(100)]],
-    street: ['', [requiredText, Validators.maxLength(200)]],
-    postalCode: ['', [Validators.required, Validators.pattern(/^[0-9]{5}$/)]],
-    city: ['', [requiredText, Validators.maxLength(100)]],
+    firstName: ['', [requiredText, Validators.maxLength(nameMaxLength)]],
+    lastName: ['', [requiredText, Validators.maxLength(nameMaxLength)]],
+    street: ['', [requiredText, Validators.maxLength(streetMaxLength)]],
+    postalCode: ['', [Validators.required, Validators.pattern(postalCodePattern)]],
+    city: ['', [requiredText, Validators.maxLength(cityMaxLength)]],
     monthlyExpenseQuota: this.formBuilder.control<number | null>(null, [
       Validators.required,
-      Validators.min(1),
+      Validators.min(minMonthlyExpenseQuota),
       Validators.pattern(/^[0-9]+$/),
     ]),
   });
@@ -155,6 +186,9 @@ export default class UserFormPage {
     if (control.hasError('required')) {
       return 'Ce champ est obligatoire.';
     }
+    if (control.hasError('rejected')) {
+      return 'Valeur refusée par le serveur.';
+    }
     if (control.hasError('maxlength')) {
       return `${control.getError('maxlength').requiredLength} caractères au maximum.`;
     }
@@ -187,6 +221,11 @@ export default class UserFormPage {
       error: (error: unknown) => {
         this.saving.set(false);
         this.error.set(saveErrorMessage(error));
+        // Cleared by the next edit of the field, which runs its validators again.
+        for (const field of rejectedFields(error)) {
+          this.form.controls[field].setErrors({ rejected: true });
+          this.form.controls[field].markAsTouched();
+        }
       },
     });
   }

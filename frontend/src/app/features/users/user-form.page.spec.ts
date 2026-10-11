@@ -23,8 +23,8 @@ const juste: UserDetails = {
   version: 3,
 };
 
-function httpError(status: number): Observable<never> {
-  return throwError(() => new HttpErrorResponse({ status }));
+function httpError(status: number, error?: unknown): Observable<never> {
+  return throwError(() => new HttpErrorResponse({ status, error }));
 }
 
 function fakeApi() {
@@ -183,6 +183,29 @@ describe('UserFormPage', () => {
 
     expect(page.alert()).toBe('Les informations saisies sont invalides.');
     expect(TestBed.inject(Router).url).toBe('/users/new');
+  });
+
+  it('flags the fields the API rejects', async () => {
+    const api = fakeApi();
+    api.create.mockImplementation(() =>
+      httpError(400, {
+        errors: {
+          'Address.Street': ['The field Street must be a string with a maximum length of 150.'],
+          city: ['The value must not be blank.'],
+        },
+      })
+    );
+    const page = await render(api, '/users/new');
+    fillJeanne(page);
+
+    await page.submit();
+
+    expect(page.errors()).toEqual([
+      'Valeur refusée par le serveur.',
+      'Valeur refusée par le serveur.',
+    ]);
+    page.fill('Rue', '6 rue Victor Hugo');
+    expect(page.errors()).toEqual(['Valeur refusée par le serveur.']);
   });
 
   it('loads the user to edit into the form', async () => {
