@@ -12,6 +12,8 @@ Feature: API documentation
       | /v1/users/{id}            |
       | /v1/users/{id}/activate   |
       | /v1/users/{id}/deactivate |
+      | /v1/expense-reports       |
+      | /v1/expense-reports/{id}  |
 
   Scenario Outline: The v1 OpenAPI document describes the error responses
     Given the API runs in the Development environment
@@ -33,6 +35,8 @@ Feature: API documentation
       | post   | /v1/users/{id}/deactivate | 409    |
       | delete | /v1/users/{id}            | 404    |
       | delete | /v1/users/{id}            | 409    |
+      | get    | /v1/expense-reports       | 400    |
+      | get    | /v1/expense-reports/{id}  | 404    |
 
   Scenario: The Scalar reference is served in Development
     Given the API runs in the Development environment

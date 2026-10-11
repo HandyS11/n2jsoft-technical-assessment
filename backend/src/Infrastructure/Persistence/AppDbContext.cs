@@ -9,7 +9,9 @@ internal sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbC
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        modelBuilder.ApplyConfiguration(new UserEntityTypeConfiguration());
+        modelBuilder
+            .ApplyConfiguration(new UserEntityTypeConfiguration())
+            .ApplyConfiguration(new ExpenseReportEntityTypeConfiguration());
     }
 
     internal static async Task SeedAsync(DbContext context, CancellationToken cancellationToken)

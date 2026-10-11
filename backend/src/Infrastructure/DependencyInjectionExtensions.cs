@@ -1,4 +1,6 @@
+using Application.ExpenseReports;
 using Application.Users;
+using Infrastructure.ExpenseReports;
 using Infrastructure.Persistence;
 using Infrastructure.Users;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +19,7 @@ public static class DependencyInjectionExtensions
                     await AppDbContext.SeedAsync(context, cancellationToken).ConfigureAwait(false)));
 
         builder.Services.AddScoped<IUserStore, UserStore>();
+        builder.Services.AddScoped<IExpenseReportStore, ExpenseReportStore>();
 
         return builder;
     }
