@@ -1,10 +1,15 @@
 Feature: API documentation
 
-  Scenario: The v1 OpenAPI document describes the users endpoint
+  Scenario Outline: The v1 OpenAPI document describes the users endpoints
     Given the API runs in the Development environment
     When I request "/openapi/v1.json"
     Then the response status is 200
-    And the OpenAPI document lists the path "/v1/users"
+    And the OpenAPI document lists the path "<path>"
+
+    Examples:
+      | path           |
+      | /v1/users      |
+      | /v1/users/{id} |
 
   Scenario: The Scalar reference is served in Development
     Given the API runs in the Development environment

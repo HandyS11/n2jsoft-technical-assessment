@@ -1,5 +1,5 @@
 using System.Reflection;
-using Application.Users.Queries;
+using Application.Users;
 using Domain.Entities;
 using Infrastructure;
 
@@ -8,7 +8,7 @@ namespace UnitTests.Architecture;
 public sealed class DependencyRuleTests
 {
     private static readonly Assembly DomainAssembly = typeof(User).Assembly;
-    private static readonly Assembly ApplicationAssembly = typeof(IUserQueries).Assembly;
+    private static readonly Assembly ApplicationAssembly = typeof(IUserStore).Assembly;
     private static readonly Assembly InfrastructureAssembly = typeof(DependencyInjectionExtensions).Assembly;
 
     [Theory]
