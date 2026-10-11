@@ -107,11 +107,11 @@ Réalisé :
   point de composition). La règle de dépendance (`Domain ← Application ← Infrastructure`) est vérifiée par des
   tests d'architecture. Les règles métier restent isolées et testables unitairement.
 - **CQRS léger, sans médiateur** : un handler par cas d'usage en écriture (à partir de la tranche 2) ; en
-  lecture, des interfaces de requêtes déclarées dans `Application` et implémentées par des projections EF Core
-  `AsNoTracking`. MediatR est devenu payant et n'apporte rien à cette taille de projet.
+  lecture, des projections EF Core `AsNoTracking`, servies depuis la tranche 2 par un « store » par
+  fonctionnalité (voir plus bas) plutôt que par des interfaces de requêtes. MediatR est devenu payant et
+  n'apporte rien à cette taille de projet.
 - **Listes paginées** côté API : `GET /v1/users?page=1&pageSize=20` (100 au plus) renvoie
-  `{ items, page, pageSize, totalCount }`. Le contrat `/v1` n'aura pas à changer quand le front ajoutera la
-  pagination.
+  `{ items, page, pageSize, totalCount }`.
 - **Versionnement d'API** par segment d'URL (`/v1/users`) avec `Asp.Versioning` : visible dans les URL et dans
   la documentation. Une version inconnue répond `404`.
 - **OpenAPI + Scalar** en développement uniquement : un document par version, et un lien « Scalar » sur la
@@ -148,8 +148,8 @@ Hypothèses (le sujet ne précise pas) :
 
 - Le quota mensuel est un entier supérieur ou égal à 1, sans plafond. Il reste modifiable ; le baisser sous le
   nombre de dépenses déjà saisies dans le mois ne touche pas l'existant et ne bloque que les nouvelles dépenses.
-- Longueurs maximales : 100 caractères pour le nom et le prénom, 200 pour la rue, 100 pour la ville. Les espaces
-  en début et en fin sont retirés.
+- Longueurs maximales : 100 caractères pour le nom et le prénom, 200 pour la rue, 100 pour la ville. Elles sont
+  comptées avant le retrait des espaces en début et en fin, qui est ensuite appliqué.
 - Un utilisateur inactif reste visible et modifiable ; seul son rattachement à une nouvelle note de frais sera
   refusé (tranche 3).
 - Un utilisateur supprimé ne peut pas être restauré.
