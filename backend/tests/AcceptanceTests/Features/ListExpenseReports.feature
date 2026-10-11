@@ -83,3 +83,22 @@ Feature: List expense reports
     Then the expense report returned is
       | Title                        | User          | Month   |
       | Juste Leblanc - Octobre 2025 | Juste Leblanc | 2025-10 |
+
+  Scenario: Each listed report counts its expenses and their total, deleted ones left out
+    Given the following users exist
+      | First name | Last name |
+      | Juste      | Leblanc   |
+    And the following expense reports exist
+      | User          | Month   |
+      | Juste Leblanc | 2025-09 |
+      | Juste Leblanc | 2025-10 |
+    And the following expenses exist in "Juste Leblanc - Octobre 2025"
+      | Date       | Description | Amount | Status  |
+      | 2025-10-02 | Hôtel       | 120.00 |         |
+      | 2025-10-15 | Taxi        | 23.50  |         |
+      | 2025-10-20 | Train       | 45.00  | Deleted |
+    When I list the expense reports
+    Then the expense reports listed with their expenses are
+      | Title                          | Expenses | Total  |
+      | Juste Leblanc - Octobre 2025   | 2        | 143.50 |
+      | Juste Leblanc - Septembre 2025 | 0        | 0.00   |

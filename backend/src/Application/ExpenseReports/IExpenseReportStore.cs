@@ -10,7 +10,7 @@ namespace Application.ExpenseReports;
 /// </summary>
 public interface IExpenseReportStore
 {
-    /// <summary>The most recent months first, then by title.</summary>
+    /// <summary>The most recent months first, then by title. Counts and totals leave deleted expenses out.</summary>
     Task<PagedResult<ExpenseReportSummary>> ListAsync(PageRequest request, CancellationToken cancellationToken);
 
     Task<ExpenseReportDetails?> GetDetailsAsync(Guid id, CancellationToken cancellationToken);

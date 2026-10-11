@@ -23,21 +23,60 @@ internal sealed class ExpenseReportStore(AppDbContext dbContext) : IExpenseRepor
             .ThenBy(report => report.Id)
             .Skip(request.Skip)
             .Take(request.PageSize)
-            .Select(report => new ExpenseReportSummary(report.Id, report.Title, report.Year, report.Month))
+            .Select(report => new ExpenseReportSummary(
+                report.Id,
+                report.Title,
+                report.Year,
+                report.Month,
+                // The expenses' query filter applies here too: deleted expenses are left out.
+                dbContext.Set<Expense>().Count(expense => expense.ExpenseReportId == report.Id),
+                dbContext.Set<Expense>()
+                    .Where(expense => expense.ExpenseReportId == report.Id)
+                    .Sum(expense => expense.Amount)))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return new PagedResult<ExpenseReportSummary>(items, request.Page, request.PageSize, totalCount);
     }
 
-    public Task<ExpenseReportDetails?> GetDetailsAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<ExpenseReportDetails?> GetDetailsAsync(Guid id, CancellationToken cancellationToken)
     {
-        return dbContext.Set<ExpenseReport>()
+        var report = await dbContext.Set<ExpenseReport>()
             .AsNoTracking()
             .Where(report => report.Id == id)
-            .Select(report => new ExpenseReportDetails(report.Id, report.Title, report.UserId, report.Year,
-                report.Month))
-            .SingleOrDefaultAsync(cancellationToken);
+            .Select(report => new
+            {
+                report.Id,
+                report.Title,
+                report.UserId,
+                report.Year,
+                report.Month,
+                ExpenseCount = dbContext.Set<Expense>().Count(expense => expense.ExpenseReportId == report.Id),
+                Total = dbContext.Set<Expense>()
+                    .Where(expense => expense.ExpenseReportId == report.Id)
+                    .Sum(expense => expense.Amount),
+            })
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (report is null)
+        {
+            return null;
+        }
+
+        // A query of its own: IgnoreQueryFilters would also bring the deleted expenses back into the counts above.
+        var user = await dbContext.Set<User>()
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(user => user.Id == report.UserId)
+            .Select(user => new
+            {
+                user.MonthlyExpenseQuota, IsDeleted = user.DeletedAt != null
+            })
+            .SingleAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return new ExpenseReportDetails(report.Id, report.Title, report.UserId, report.Year, report.Month,
+            report.ExpenseCount, report.Total, user.MonthlyExpenseQuota, user.IsDeleted);
     }
 
     public Task<bool> ExistsAsync(Guid userId, ReportMonth period, CancellationToken cancellationToken)
