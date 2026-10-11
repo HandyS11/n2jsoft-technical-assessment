@@ -282,8 +282,11 @@ Réalisé :
   avant de lancer l'application.
 - **Premier lancement vérifié** depuis un clone neuf (sans `node_modules`, `bin` ni `obj`) :
   `dotnet run --project tools/N2JSoft.Aspire` démarre la base, l'API et le front, avec les utilisateurs de
-  démonstration (Juste Leblanc, Marc Assin). Si le navigateur signale un certificat non approuvé sur le dashboard ou
-  l'API, approuver le certificat de développement : `dotnet dev-certs https --trust` (Windows, macOS).
+  démonstration (Juste Leblanc, Marc Assin).
+- **Certificat de développement** : sans certificat approuvé, le dashboard ne joint pas l'AppHost (« Lost connection
+  to the AppHost ») et ne reçoit pas la télémétrie, qui passe en https. L'approuver avec
+  `dotnet dev-certs https --trust` (Windows, macOS). Sous Linux, où l'approbation dépend de la distribution, lancer en
+  http : `ASPIRE_ALLOW_UNSECURED_TRANSPORT=true dotnet run --project tools/N2JSoft.Aspire --launch-profile http`.
 
 ### Lancer les tests
 
