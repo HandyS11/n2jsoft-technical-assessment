@@ -1,0 +1,90 @@
+name: SonarQube
+
+permissions:
+  contents: read
+
+# The SonarQube server has no branch or pull request analysis: only develop, the main branch, is analysed
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: sonarqube
+  cancel-in-progress: true
+
+jobs:
+  analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history so SonarQube can blame lines and detect new code
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend tests with coverage
+        working-directory: frontend
+        run: npx nx test n2f --coverage --skip-nx-cache
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Restore tools
+        run: dotnet tool restore
+
+      # The .NET scanner also analyses the files outside the MSBuild projects: the frontend, the workflows
+      - name: Begin analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+        run: >-
+          dotnet sonarscanner begin
+          /k:"$SONAR_PROJECT_KEY"
+          /d:sonar.host.url="$SONAR_HOST_URL"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.cs.vscoveragexml.reportsPaths="artifacts/coverage/*.coverage.xml"
+          /d:sonar.javascript.lcov.reportPaths="frontend/coverage/n2f/lcov.info"
+          /d:sonar.exclusions="frontend/coverage/**,**/Migrations/**"
+          /d:sonar.coverage.exclusions="backend/tests/**,frontend/**/*.spec.ts"
+          /d:sonar.cpd.exclusions="**/Migrations/**"
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Unit tests with coverage
+        run: >-
+          dotnet test --project backend/tests/UnitTests --no-build --configuration Release
+          --coverage --coverage-output-format xml --coverage-output unit-tests.coverage.xml
+          --results-directory artifacts/coverage
+
+      - name: Acceptance tests with coverage (Testcontainers uses the runner's Docker)
+        run: >-
+          dotnet test --project backend/tests/AcceptanceTests --no-build --configuration Release
+          --coverage --coverage-output-format xml --coverage-output acceptance-tests.coverage.xml
+          --results-directory artifacts/coverage
+
+      - name: End analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
