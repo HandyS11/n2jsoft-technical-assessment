@@ -18,11 +18,7 @@ public sealed record ExpenseDetails(
             expense.Date,
             expense.Description,
             expense.Amount,
-            new ExpenseBillingAddress(
-                expense.BillingAddress.StoreName,
-                expense.BillingAddress.Address.Street,
-                expense.BillingAddress.Address.PostalCode,
-                expense.BillingAddress.Address.City),
+            ExpenseBillingAddress.From(expense.BillingAddress),
             expense.Version);
     }
 }
