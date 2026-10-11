@@ -1,6 +1,6 @@
 # Expenses — design
 
-Slice 4 of the [roadmap](../roadmap.md). Status: approved design, pending implementation plan.
+Slice 4 of the [roadmap](../roadmap.md). Status: approved design; see the [implementation plan](../plans/2026-10-11-expenses.md).
 Builds on the [Foundation](2026-10-10-foundation-design.md), [Users](2026-10-11-users-design.md) and
 [Expense Reports](2026-10-11-expense-reports-design.md) designs, whose conventions apply unless stated otherwise here.
 
@@ -182,11 +182,14 @@ Then:
 Reads:
 
 - `ExpenseStore.ListAsync` sorts by `Date`, then `Id`. A report that does not exist answers `404` (the endpoint asks
-  `IExpenseReportStore.GetDetailsAsync` first), so an empty list always means an existing, empty report.
+  `IExpenseReportStore.ExistsAsync(id)` first), so an empty list always means an existing, empty report.
 - `ExpenseReportSummary` and `ExpenseReportDetails` compute `ExpenseCount` and `Total` (sum of `Amount`, `0` when
   empty) over the report's live expenses with correlated subqueries.
 - `ExpenseReportDetails.MonthlyExpenseQuota` and `IsReadOnly` (the user is deleted) come from the report's user,
-  read with `IgnoreQueryFilters()`. This is the only report read that touches `users`; the list still does not.
+  read with `IgnoreQueryFilters()` in a second query: in the same query it would also bring the deleted expenses back
+  into the counts. This is the only report read that touches `users`; the list still does not.
+- `ExpenseReportDetails.From(report, user)` describes a report just created: no expense, a total of 0, the user's
+  quota, not read-only.
 
 `AddApplication()` registers the three handlers; `AddInfrastructure()` registers the store, scoped.
 
@@ -212,7 +215,7 @@ All routes under `/v1/expense-reports/{reportId}/expenses`.
 - `404` for an unknown report, and for an expense that is unknown, deleted, or in another report — including a
   second `DELETE`.
 - `ETag` / `If-Match` follow the users' format (`"<xmin>"`); the `If-Match` parsing in `UserEndpoints` moves to a
-  shared helper both endpoint classes use.
+  shared helper both endpoint classes use (`Endpoints/EntityTags.cs`).
 - `GET /v1/expense-reports` and `GET /v1/expense-reports/{id}` return the new fields (`expenseCount`, `total`, and
   on the detail `monthlyExpenseQuota`, `isReadOnly`).
 
@@ -226,6 +229,7 @@ signals, French text.
     `fr-FR`). For a read-only report, "3 dépenses" without the quota.
   - A read-only report shows "L'utilisateur de cette note de frais a été supprimé : elle est en lecture seule."
     instead of the form, and the table has no actions. The report itself can still be deleted.
+  - The report's delete button reads *Supprimer la note de frais*, so the rows' *Supprimer* stay unambiguous.
   - The form, then the expenses table.
 - **`ExpenseFormComponent`** (`expense-form.component.ts`), inputs `reportId`, `period` (year and month), and the
   expense being edited (or none); output `saved`.
@@ -233,8 +237,9 @@ signals, French text.
     *Description* (required, at most 50, with a "12/50" counter), *Montant (€)* (`step="0.01"`, between 0,01 and
     999 999,99, two decimals at most), *Enseigne (facultatif)*, *Rue*, *Code postal*, *Ville*. Validators mirror
     the API, with French messages once a field is touched.
-  - Add mode: *Ajouter*. Edit mode, entered by *Modifier* on a row: the page loads `GET …/{id}` (for its `ETag`) and
-    fills the form; the button reads *Enregistrer*, with *Annuler* to return to add mode.
+  - Add mode: *Ajouter*. Edit mode, entered by *Modifier* on a row: the page loads `GET …/{id}` (for its `version`)
+    and fills the form; the button reads *Enregistrer*, with *Annuler* to return to add mode. A failed load shows
+    "Dépense introuvable." and reloads the list.
   - On success it emits `saved` and returns to an empty add form; the page reloads the current page of expenses
     and the report header, and shows "Dépense ajoutée." or "Dépense modifiée.".
   - Errors in a `role="alert"` message, through `businessRuleCode()`:
@@ -245,17 +250,20 @@ signals, French text.
     | `422 expense.date_outside_report_month` | La date doit être comprise dans le mois de la note de frais.                                  |
     | `422 expense_report.deleted_user`     | L'utilisateur de cette note de frais a été supprimé : elle est en lecture seule.                |
     | `412`                                 | Cette dépense a été modifiée entre-temps. Rechargez-la avant de l'enregistrer.                  |
-    | `404`                                 | Dépense introuvable.                                                                            |
+    | `404`                                 | Note de frais introuvable. (adding) / Dépense introuvable. (editing)                            |
+    | `400`                                 | Les informations saisies sont invalides.                                                        |
     | anything else                         | L'opération a échoué. Veuillez réessayer.                                                       |
 
     A `deleted_user` answer also reloads the report header, which turns the page read-only.
 - **Expenses table**: *Date* ("mercredi 15 octobre 2025", `formatDate` with `EEEE d MMMM y` and `fr-FR`),
   *Description*, *Montant*, *Adresse de facturation* ("Fnac, 12 rue de Rivoli, 75001 Paris", the store name
-  omitted when absent), *Actions* (*Modifier*; *Supprimer*: native `confirm()`, then delete and reload). Pages of 5
+  omitted when absent), *Actions* (*Modifier*; *Supprimer*: native `confirm()` "Supprimer la dépense « Taxi » ?",
+  then delete and reload). Pages of 5
   through `pagedList`, with *Précédent* / *Suivant* and "Page X sur Y". "Aucune dépense." when empty; a failed load
   shows "Impossible de charger les dépenses.".
-- **`ExpensesApi`**: `list(reportId, page, pageSize)`, `get(reportId, id)` (body and `ETag`),
-  `create(reportId, request)`, `update(reportId, id, request, etag)` (`If-Match`), `delete(reportId, id)`;
+- **`ExpensesApi`**: `list(reportId, page, pageSize)`, `get(reportId, id)` (the body carries `version`),
+  `create(reportId, request)`, `update(reportId, id, request, version)` (`If-Match: "<version>"`, like
+  `UsersApi.update`), `delete(reportId, id)`;
   `ExpenseSummary` and `ExpenseDetails` interfaces mirror the API.
 - **Reports list**: the table gains *Dépenses* and *Total* columns; `ExpenseReportSummary` and
   `ExpenseReportDetails` gain the new fields.
@@ -294,7 +302,7 @@ Written test-first.
 
 ## Risks to verify first
 
-The implementation plan starts with a spike for each; a failing spike changes the plan before dependent work.
+All three were verified while planning, in a throwaway worktree against Postgres 18.3: each holds as designed (see the plan's "Verified during planning"), so no fallback applies.
 
 1. EF Core 10 with Npgsql maps a nested complex property (`BillingAddress` holding `Address`) with a nullable
    `StoreName`, in a migration and in a projection into `ExpenseSummary` (fallback: flatten `BillingAddress` into
