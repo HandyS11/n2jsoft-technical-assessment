@@ -7,9 +7,11 @@ Feature: API documentation
     And the OpenAPI document lists the path "<path>"
 
     Examples:
-      | path           |
-      | /v1/users      |
-      | /v1/users/{id} |
+      | path                      |
+      | /v1/users                 |
+      | /v1/users/{id}            |
+      | /v1/users/{id}/activate   |
+      | /v1/users/{id}/deactivate |
 
   Scenario: The Scalar reference is served in Development
     Given the API runs in the Development environment

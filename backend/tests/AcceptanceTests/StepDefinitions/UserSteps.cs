@@ -5,6 +5,7 @@ using Application.Users;
 using Domain.Entities;
 using Domain.ValueObjects;
 using Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Reqnroll;
 
@@ -113,6 +114,16 @@ public sealed class UserSteps(ApiDriver api, KnownUsers knownUsers)
     {
         var user = await api.ReadJsonAsync<UserDetails>();
         StatusOf(user.IsActive).ShouldBe(status);
+    }
+
+    [Then("the user {string} is still stored, marked as deleted")]
+    public async Task ThenTheUserIsStillStoredMarkedAsDeletedAsync(string name)
+    {
+        var id = knownUsers.IdOf(name);
+        using var scope = TestEnvironment.Factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await dbContext.Set<User>().IgnoreQueryFilters().SingleAsync(stored => stored.Id == id);
+        user.DeletedAt.ShouldNotBeNull();
     }
 
     private static User ToUser(DataTableRow row)

@@ -46,6 +46,48 @@ public sealed class UserCommandSteps(ApiDriver api, KnownUsers knownUsers)
         return api.SendAsync(HttpMethod.Put, PathOf(Guid.NewGuid()), ValidRequest());
     }
 
+    [When("I update the user {string}")]
+    public Task WhenIUpdateTheUserAsync(string name)
+    {
+        return api.SendAsync(HttpMethod.Put, PathOf(knownUsers.IdOf(name)), ValidRequest());
+    }
+
+    [When("I activate the user {string}")]
+    public Task WhenIActivateTheUserAsync(string name)
+    {
+        return api.SendAsync(HttpMethod.Post, $"{PathOf(knownUsers.IdOf(name))}/activate");
+    }
+
+    [When("I deactivate the user {string}")]
+    public Task WhenIDeactivateTheUserAsync(string name)
+    {
+        return api.SendAsync(HttpMethod.Post, $"{PathOf(knownUsers.IdOf(name))}/deactivate");
+    }
+
+    [When("I delete the user {string}")]
+    public Task WhenIDeleteTheUserAsync(string name)
+    {
+        return api.SendAsync(HttpMethod.Delete, PathOf(knownUsers.IdOf(name)));
+    }
+
+    [When("I activate an unknown user")]
+    public Task WhenIActivateAnUnknownUserAsync()
+    {
+        return api.SendAsync(HttpMethod.Post, $"{PathOf(Guid.NewGuid())}/activate");
+    }
+
+    [When("I deactivate an unknown user")]
+    public Task WhenIDeactivateAnUnknownUserAsync()
+    {
+        return api.SendAsync(HttpMethod.Post, $"{PathOf(Guid.NewGuid())}/deactivate");
+    }
+
+    [When("I delete an unknown user")]
+    public Task WhenIDeleteAnUnknownUserAsync()
+    {
+        return api.SendAsync(HttpMethod.Delete, PathOf(Guid.NewGuid()));
+    }
+
     [Then("the response locates the created user")]
     public async Task ThenTheResponseLocatesTheCreatedUserAsync()
     {

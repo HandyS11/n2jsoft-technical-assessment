@@ -20,6 +20,9 @@ internal static class UserEndpoints
         users.MapGet("/{id:guid}", GetUserAsync);
         users.MapPost("/", CreateUserAsync);
         users.MapPut("/{id:guid}", UpdateUserAsync);
+        users.MapPost("/{id:guid}/activate", ActivateUserAsync);
+        users.MapPost("/{id:guid}/deactivate", DeactivateUserAsync);
+        users.MapDelete("/{id:guid}", DeleteUserAsync);
 
         return endpoints;
     }
@@ -79,6 +82,40 @@ internal static class UserEndpoints
                     request.MonthlyExpenseQuota),
                 cancellationToken)
             .ConfigureAwait(false);
+        return TypedResults.NoContent();
+    }
+
+    private static Task<NoContent> ActivateUserAsync(
+        Guid id,
+        SetUserActivationHandler handler,
+        CancellationToken cancellationToken)
+    {
+        return SetActivationAsync(new SetUserActivationCommand(id, IsActive: true), handler, cancellationToken);
+    }
+
+    private static Task<NoContent> DeactivateUserAsync(
+        Guid id,
+        SetUserActivationHandler handler,
+        CancellationToken cancellationToken)
+    {
+        return SetActivationAsync(new SetUserActivationCommand(id, IsActive: false), handler, cancellationToken);
+    }
+
+    private static async Task<NoContent> SetActivationAsync(
+        SetUserActivationCommand command,
+        SetUserActivationHandler handler,
+        CancellationToken cancellationToken)
+    {
+        await handler.HandleAsync(command, cancellationToken).ConfigureAwait(false);
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<NoContent> DeleteUserAsync(
+        Guid id,
+        DeleteUserHandler handler,
+        CancellationToken cancellationToken)
+    {
+        await handler.HandleAsync(new DeleteUserCommand(id), cancellationToken).ConfigureAwait(false);
         return TypedResults.NoContent();
     }
 }
