@@ -8,6 +8,11 @@ export const appRoutes: Route[] = [
     loadComponent: () => import('./features/expense-reports/expense-report-list.page'),
   },
   {
+    path: 'expense-reports/:id',
+    title: 'Note de frais',
+    loadComponent: () => import('./features/expense-reports/expense-report.page'),
+  },
+  {
     path: 'users',
     title: 'Utilisateurs',
     loadComponent: () => import('./features/users/user-list.page'),

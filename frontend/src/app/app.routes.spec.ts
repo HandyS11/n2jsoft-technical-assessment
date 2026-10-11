@@ -31,6 +31,8 @@ describe('appRoutes', () => {
           provide: ExpenseReportsApi,
           useValue: {
             list: () => of({ items: [], page: 1, pageSize: 20, totalCount: 0 }),
+            get: () =>
+              of({ id: '1', title: 'Juste Leblanc - Octobre 2025', userId: 'u1', year: 2025, month: 10 }),
           },
         },
       ],
@@ -83,6 +85,16 @@ describe('appRoutes', () => {
 
     expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(
       "Modifier l'utilisateur"
+    );
+  });
+
+  it('opens a report at /expense-reports/:id', async () => {
+    const harness = await RouterTestingHarness.create();
+
+    await harness.navigateByUrl('/expense-reports/1');
+
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(
+      'Juste Leblanc - Octobre 2025'
     );
   });
 });
