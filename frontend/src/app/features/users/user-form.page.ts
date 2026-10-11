@@ -139,7 +139,7 @@ export default class UserFormPage {
     monthlyExpenseQuota: this.formBuilder.control<number | null>(null, [
       Validators.required,
       Validators.min(minMonthlyExpenseQuota),
-      Validators.pattern(/^[0-9]+$/),
+      Validators.pattern(/^\d+$/),
     ]),
   });
 

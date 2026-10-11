@@ -20,7 +20,7 @@ const pageSize = 20;
  * An <input type="month"> value ("2025-10") within the API's bounds (ReportMonth.MinYear and MaxYear). Checked here
  * because some browsers show the field as plain text, where anything can be typed.
  */
-const monthPattern = /^(20[0-9]{2}|2100)-(0[1-9]|1[0-2])$/;
+const monthPattern = /^(20\d{2}|2100)-(0[1-9]|1[0-2])$/;
 
 const ruleMessages = new Map<string, string>([
   [
