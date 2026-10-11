@@ -12,7 +12,7 @@ public sealed record Address
     public Address(string street, string postalCode, string city)
     {
         Street = Text.Required(street, StreetMaxLength);
-        PostalCode = postalCode.Trim();
+        PostalCode = postalCode?.Trim() ?? string.Empty;
         if (PostalCode.Length != PostalCodeLength || !PostalCode.All(char.IsAsciiDigit))
         {
             throw new InvalidValueException(nameof(postalCode), $"The postal code must be {PostalCodeLength} digits.");

@@ -59,6 +59,13 @@ public sealed class AddressTests
             .ParameterName.ShouldBe("postalCode");
     }
 
+    [Fact]
+    public void Rejects_a_missing_postal_code()
+    {
+        Should.Throw<InvalidValueException>(() => new Address("12 rue de Rivoli", null!, "Paris"))
+            .ParameterName.ShouldBe("postalCode");
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
