@@ -171,10 +171,18 @@ Réalisé :
 - **Règles métier**, premières réponses `422` (avec un `code` que le front traduit) : seul un utilisateur actif peut
   être affecté à une note de frais (`expense_report.inactive_user`) ; un utilisateur a au plus une note de frais par
   mois (`expense_report.already_exists`). Cette seconde règle est vérifiée avant l'enregistrement et garantie par un
-  index unique : deux créations simultanées donnent une note et un `422`, jamais une erreur `500`.
+  index unique : deux créations simultanées donnent une note et un `422`, jamais une erreur `500`. La première règle
+  tient aussi face à une désactivation ou une suppression simultanée : la création verrouille la ligne de
+  l'utilisateur (`SELECT … FOR SHARE`, dans la transaction de l'enregistrement) ; la modification concurrente attend
+  la fin de la création, ou la création voit la modification déjà enregistrée.
+- **Erreurs d'enregistrement** : `AppDbContext.SaveChangesAsync` traduit seul les erreurs de la base (`409` pour un
+  utilisateur modifié entre-temps, `404` pour une note déjà supprimée, `422` pour une note en double), quel que soit
+  le store par lequel le handler enregistre.
 - **API** sous `/v1/expense-reports` : liste paginée (le mois le plus récent d'abord), détail, création (`201` +
   `Location`) et suppression physique (`DELETE` ; `404` si la note a déjà été supprimée, y compris par une requête
-  simultanée). `GET /v1/users` accepte un filtre `isActive`.
+  simultanée). `GET /v1/users` accepte un filtre `isActive`. `GET /v1/users/active` lit les utilisateurs actifs
+  tranche par tranche avec un curseur (`after`, le `next` de la tranche précédente) : contrairement aux pages, une
+  activation ou une désactivation entre deux lectures ne fait ni sauter ni répéter un utilisateur.
 - **Front** : la page des notes de frais, devenue la page d'accueil, permet d'en créer une en choisissant un
   utilisateur actif et un mois (le mois courant par défaut), puis ouvre la note créée. Elle liste les notes par pages
   de 20, avec suppression après confirmation. La page d'une note affiche son intitulé et son mois et permet de la
