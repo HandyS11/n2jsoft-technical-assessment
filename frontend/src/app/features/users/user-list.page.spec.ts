@@ -222,4 +222,20 @@ describe('UserListPage', () => {
       page.element.querySelector('[role="alert"]')?.textContent?.trim()
     ).toBe("L'opération a échoué. Veuillez réessayer.");
   });
+
+  it('reloads the current page when an action fails, keeping the alert', () => {
+    const api = fakeApi(() => of(pageOf([juste])));
+    api.deactivate.mockImplementation(() =>
+      throwError(() => new Error('Not found'))
+    );
+    const page = render(api);
+
+    page.click('Désactiver', 0);
+
+    expect(api.list).toHaveBeenCalledTimes(2);
+    expect(api.list).toHaveBeenLastCalledWith(1, 20);
+    expect(
+      page.element.querySelector('[role="alert"]')?.textContent?.trim()
+    ).toBe("L'opération a échoué. Veuillez réessayer.");
+  });
 });

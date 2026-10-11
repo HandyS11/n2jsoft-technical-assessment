@@ -111,7 +111,11 @@ export default class UserListPage {
     this.actionFailed.set(false);
     action.subscribe({
       next: () => this.load(this.page()?.page ?? 1),
-      error: () => this.actionFailed.set(true),
+      error: () => {
+        // The user may be gone (deleted in another tab): reload so a stale row does not stay.
+        this.actionFailed.set(true);
+        this.load(this.page()?.page ?? 1);
+      },
     });
   }
 }
