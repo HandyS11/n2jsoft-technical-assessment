@@ -29,7 +29,7 @@ export default class UserListPage {
   // Only the first page for now: the list has no pagination controls yet.
   protected readonly users = toSignal(
     inject(UsersApi)
-      .list()
+      .list(1, 20)
       .pipe(
         map((page) => page.items),
         catchError(() => {

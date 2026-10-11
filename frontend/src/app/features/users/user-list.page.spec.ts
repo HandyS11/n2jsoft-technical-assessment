@@ -24,8 +24,20 @@ describe('UserListPage', () => {
     const page = render(
       of(
         firstPage([
-          { id: '1', name: 'Juste Leblanc' },
-          { id: '2', name: 'Marc Assin' },
+          {
+            id: '1',
+            name: 'Juste Leblanc',
+            city: 'Paris',
+            monthlyExpenseQuota: 10,
+            isActive: true,
+          },
+          {
+            id: '2',
+            name: 'Marc Assin',
+            city: 'Lyon',
+            monthlyExpenseQuota: 5,
+            isActive: false,
+          },
         ])
       )
     );
