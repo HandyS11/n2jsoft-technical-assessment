@@ -1,3 +1,4 @@
+using Application;
 using Asp.Versioning;
 using Infrastructure;
 using Scalar.AspNetCore;
@@ -7,6 +8,7 @@ using WebApi.Errors;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddInfrastructure();
+builder.Services.AddApplication();
 builder.Services.AddErrorHandling(builder.Environment);
 builder.Services.AddValidation();
 builder.Services.AddHealthChecks();

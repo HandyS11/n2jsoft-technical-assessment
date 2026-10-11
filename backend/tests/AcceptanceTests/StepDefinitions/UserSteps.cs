@@ -108,6 +108,13 @@ public sealed class UserSteps(ApiDriver api, KnownUsers knownUsers)
             () => StatusOf(user.IsActive).ShouldBe(expected["Status"]));
     }
 
+    [Then("the user returned has the status {string}")]
+    public async Task ThenTheUserReturnedHasTheStatusAsync(string status)
+    {
+        var user = await api.ReadJsonAsync<UserDetails>();
+        StatusOf(user.IsActive).ShouldBe(status);
+    }
+
     private static User ToUser(DataTableRow row)
     {
         var user = User.Create(

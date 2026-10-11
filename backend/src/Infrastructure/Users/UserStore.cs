@@ -45,4 +45,19 @@ internal sealed class UserStore(AppDbContext dbContext) : IUserStore
                 user.IsActive))
             .SingleOrDefaultAsync(cancellationToken);
     }
+
+    public Task<User?> FindAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return dbContext.Set<User>().SingleOrDefaultAsync(user => user.Id == id, cancellationToken);
+    }
+
+    public void Add(User user)
+    {
+        dbContext.Set<User>().Add(user);
+    }
+
+    public Task SaveChangesAsync(CancellationToken cancellationToken)
+    {
+        return dbContext.SaveChangesAsync(cancellationToken);
+    }
 }
