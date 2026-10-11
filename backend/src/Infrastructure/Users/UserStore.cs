@@ -1,3 +1,4 @@
+using Application.Exceptions;
 using Application.Paging;
 using Application.Users;
 using Domain.Entities;
@@ -42,7 +43,8 @@ internal sealed class UserStore(AppDbContext dbContext) : IUserStore
                 user.LastName,
                 new UserAddress(user.Address.Street, user.Address.PostalCode, user.Address.City),
                 user.MonthlyExpenseQuota,
-                user.IsActive))
+                user.IsActive,
+                user.Version))
             .SingleOrDefaultAsync(cancellationToken);
     }
 
@@ -56,8 +58,19 @@ internal sealed class UserStore(AppDbContext dbContext) : IUserStore
         dbContext.Set<User>().Add(user);
     }
 
-    public Task SaveChangesAsync(CancellationToken cancellationToken)
+    public async Task SaveChangesAsync(CancellationToken cancellationToken)
     {
-        return dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            var entry = exception.Entries[0];
+            throw new ConcurrencyConflictException(
+                entry.Metadata.ClrType.Name,
+                entry.Property("Id").CurrentValue!,
+                exception);
+        }
     }
 }

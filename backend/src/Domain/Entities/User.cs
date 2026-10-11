@@ -26,6 +26,9 @@ public sealed class User
     /// <summary>Set by a logical deletion; a deleted user is hidden from every query.</summary>
     public DateTimeOffset? DeletedAt { get; private set; }
 
+    /// <summary>Set by the database on every save, so an update made from an older copy of the user can be detected.</summary>
+    public uint Version { get; }
+
     public static User Create(string firstName, string lastName, Address address, int monthlyExpenseQuota)
     {
         var user = new User

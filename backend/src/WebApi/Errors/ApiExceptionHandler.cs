@@ -27,6 +27,15 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetailsS
             {
                 Status = StatusCodes.Status400BadRequest,
             },
+            // The title defaults to the status phrase.
+            ConcurrencyConflictException conflict => new ProblemDetails
+            {
+                // 412: the request stated the version it expected (If-Match). 409: it saved over a concurrent change.
+                Status = httpContext.Request.Headers.IfMatch.Count > 0
+                    ? StatusCodes.Status412PreconditionFailed
+                    : StatusCodes.Status409Conflict,
+                Detail = conflict.Message,
+            },
             BusinessRuleViolationException violation => new ProblemDetails
             {
                 Status = StatusCodes.Status422UnprocessableEntity,
@@ -40,7 +49,7 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetailsS
             // Malformed requests; Development throws them (ThrowOnBadRequest) instead of answering 400.
             BadHttpRequestException badRequest => new ProblemDetails
             {
-                Status = badRequest.StatusCode,
+                Status = badRequest.StatusCode, Detail = badRequest.Message,
             },
             _ => null,
         };

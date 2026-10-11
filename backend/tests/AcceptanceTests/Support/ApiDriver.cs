@@ -30,12 +30,18 @@ public sealed class ApiDriver : IDisposable
         return SendAsync(HttpMethod.Get, path);
     }
 
-    public async Task SendAsync(HttpMethod method, string path, JsonNode? body = null)
+    public async Task SendAsync(HttpMethod method, string path, JsonNode? body = null, string? ifMatch = null)
     {
         using var request = new HttpRequestMessage(method, new Uri(path, UriKind.Relative));
         if (body is not null)
         {
             request.Content = JsonContent.Create(body);
+        }
+
+        if (ifMatch is not null)
+        {
+            // Unvalidated: some scenarios send a malformed value on purpose.
+            request.Headers.TryAddWithoutValidation("If-Match", ifMatch);
         }
 
         _response?.Dispose();

@@ -25,8 +25,11 @@ export class UsersApi {
     return this.http.post<UserDetails>(usersUrl, user);
   }
 
-  update(id: string, user: SaveUser): Observable<void> {
-    return this.http.put<void>(`${usersUrl}/${id}`, user);
+  /** Refused with 412 when the user changed since `version` was read. */
+  update(id: string, user: SaveUser, version: number): Observable<void> {
+    return this.http.put<void>(`${usersUrl}/${id}`, user, {
+      headers: { 'If-Match': `"${version}"` },
+    });
   }
 
   activate(id: string): Observable<void> {

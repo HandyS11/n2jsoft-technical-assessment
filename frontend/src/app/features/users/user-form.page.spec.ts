@@ -20,6 +20,7 @@ const juste: UserDetails = {
   address: { street: '12 rue de Rivoli', postalCode: '75001', city: 'Paris' },
   monthlyExpenseQuota: 10,
   isActive: true,
+  version: 3,
 };
 
 function httpError(status: number): Observable<never> {
@@ -30,7 +31,7 @@ function fakeApi() {
   return {
     get: vi.fn((): Observable<UserDetails> => of(juste)),
     create: vi.fn(
-      (): Observable<UserDetails> => of({ ...jeanne, id: '2', isActive: true })
+      (): Observable<UserDetails> => of({ ...jeanne, id: '2', isActive: true, version: 1 })
     ),
     update: vi.fn((): Observable<void> => of(undefined)),
   };
@@ -202,12 +203,16 @@ describe('UserFormPage', () => {
 
     await page.submit();
 
-    expect(api.update).toHaveBeenCalledWith('1', {
-      firstName: 'Juste',
-      lastName: 'Leblanc',
-      address: { street: '12 rue de Rivoli', postalCode: '75001', city: 'Lyon' },
-      monthlyExpenseQuota: 10,
-    });
+    expect(api.update).toHaveBeenCalledWith(
+      '1',
+      {
+        firstName: 'Juste',
+        lastName: 'Leblanc',
+        address: { street: '12 rue de Rivoli', postalCode: '75001', city: 'Lyon' },
+        monthlyExpenseQuota: 10,
+      },
+      3
+    );
     expect(TestBed.inject(Router).url).toBe('/users');
   });
 
@@ -219,6 +224,22 @@ describe('UserFormPage', () => {
     expect(page.alert()).toBe('Utilisateur introuvable.');
     expect(page.element().querySelector('form')).toBeNull();
   });
+
+  it.each([409, 412])(
+    'says so when the user was changed meanwhile (%i)',
+    async (status) => {
+      const api = fakeApi();
+      api.update.mockImplementation(() => httpError(status));
+      const page = await render(api, '/users/1/edit');
+
+      await page.submit();
+
+      expect(page.alert()).toBe(
+        "L'utilisateur a été modifié entre-temps. Rechargez la page pour repartir de ses dernières informations."
+      );
+      expect(TestBed.inject(Router).url).toBe('/users/1/edit');
+    }
+  );
 
   it('says so when the user was deleted while being edited', async () => {
     const api = fakeApi();

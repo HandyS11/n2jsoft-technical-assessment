@@ -6,6 +6,7 @@ Feature: Create a user
       | Jeanne     | Martin    | 5 rue Victor Hugo | 33000       | Bordeaux | 8             |
     Then the response status is 201
     And the response locates the created user
+    And the response ETag is the version of the user returned
     And the user returned is
       | First name | Last name | Street            | Postal code | City     | Monthly quota | Status |
       | Jeanne     | Martin    | 5 rue Victor Hugo | 33000       | Bordeaux | 8             | Active |

@@ -16,7 +16,7 @@ const jeanne: SaveUser = {
   address: { street: '5 rue Victor Hugo', postalCode: '33000', city: 'Bordeaux' },
   monthlyExpenseQuota: 8,
 };
-const details: UserDetails = { ...jeanne, id, isActive: true };
+const details: UserDetails = { ...jeanne, id, isActive: true, version: 1 };
 
 describe('UsersApi', () => {
   let api: UsersApi;
@@ -80,12 +80,13 @@ describe('UsersApi', () => {
     expect(result).toEqual(details);
   });
 
-  it('updates a user with PUT /api/v1/users/:id', () => {
-    api.update(id, jeanne).subscribe();
+  it('updates a user with PUT /api/v1/users/:id, if it is still at the version read', () => {
+    api.update(id, jeanne, 7).subscribe();
 
     const request = http.expectOne(`/api/v1/users/${id}`);
     expect(request.request.method).toBe('PUT');
     expect(request.request.body).toEqual(jeanne);
+    expect(request.request.headers.get('If-Match')).toBe('"7"');
     request.flush(null, { status: 204, statusText: 'No Content' });
   });
 

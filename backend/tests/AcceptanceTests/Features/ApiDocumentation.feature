@@ -25,9 +25,14 @@ Feature: API documentation
       | post   | /v1/users                 | 400    |
       | put    | /v1/users/{id}            | 400    |
       | put    | /v1/users/{id}            | 404    |
+      | put    | /v1/users/{id}            | 409    |
+      | put    | /v1/users/{id}            | 412    |
       | post   | /v1/users/{id}/activate   | 404    |
+      | post   | /v1/users/{id}/activate   | 409    |
       | post   | /v1/users/{id}/deactivate | 404    |
+      | post   | /v1/users/{id}/deactivate | 409    |
       | delete | /v1/users/{id}            | 404    |
+      | delete | /v1/users/{id}            | 409    |
 
   Scenario: The Scalar reference is served in Development
     Given the API runs in the Development environment

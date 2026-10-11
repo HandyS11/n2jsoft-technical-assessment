@@ -15,4 +15,6 @@ export interface SaveUser {
 export interface UserDetails extends SaveUser {
   id: string;
   isActive: boolean;
+  /** Changes on every save; sent back on update so a change made meanwhile is not overwritten. */
+  version: number;
 }

@@ -48,6 +48,12 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<int>("MonthlyExpenseQuota")
                         .HasColumnType("integer");
 
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Address", "Domain.Entities.User.Address#Address", b1 =>
                         {
                             b1.IsRequired();

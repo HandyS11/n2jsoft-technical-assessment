@@ -34,6 +34,30 @@ Feature: Update a user
     When I update an unknown user
     Then the response is a problem with status 404
 
+  Scenario: Updating with the ETag read replaces the details
+    Given the following users exist
+      | First name | Last name |
+      | Juste      | Leblanc   |
+    When I read the user "Juste Leblanc"
+    And I update the user "Juste Leblanc" with the ETag read
+    Then the response status is 204
+
+  Scenario: Updating with an ETag read before another change is refused
+    Given the following users exist
+      | First name | Last name |
+      | Juste      | Leblanc   |
+    When I read the user "Juste Leblanc"
+    And I update the user "Juste Leblanc"
+    And I update the user "Juste Leblanc" with the ETag read
+    Then the response is a problem with status 412
+
+  Scenario: Updating with an If-Match that is not an ETag of the API is rejected
+    Given the following users exist
+      | First name | Last name |
+      | Juste      | Leblanc   |
+    When I update the user "Juste Leblanc" with the If-Match "not-an-etag"
+    Then the response is a problem with status 400
+
   Scenario: A user stored with an address the current rules reject can still be corrected
     Given the following users exist
       | First name | Last name |

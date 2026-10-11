@@ -11,6 +11,8 @@ public sealed class UserCommandSteps(ApiDriver api, KnownUsers knownUsers)
 {
     private const string UsersPath = "/v1/users";
 
+    private string? _entityTagRead;
+
     [When("I create the user")]
     public Task WhenICreateTheUserAsync(DataTable table)
     {
@@ -50,6 +52,26 @@ public sealed class UserCommandSteps(ApiDriver api, KnownUsers knownUsers)
     public Task WhenIUpdateTheUserAsync(string name)
     {
         return api.SendAsync(HttpMethod.Put, PathOf(knownUsers.IdOf(name)), ValidRequest());
+    }
+
+    [When("I read the user {string}")]
+    public async Task WhenIReadTheUserAsync(string name)
+    {
+        await api.GetAsync(PathOf(knownUsers.IdOf(name)));
+        _entityTagRead = api.Response.Headers.ETag.ShouldNotBeNull().ToString();
+    }
+
+    [When("I update the user {string} with the ETag read")]
+    public Task WhenIUpdateTheUserWithTheETagReadAsync(string name)
+    {
+        return api.SendAsync(HttpMethod.Put, PathOf(knownUsers.IdOf(name)), ValidRequest(),
+            _entityTagRead.ShouldNotBeNull());
+    }
+
+    [When("I update the user {string} with the If-Match {string}")]
+    public Task WhenIUpdateTheUserWithTheIfMatchAsync(string name, string ifMatch)
+    {
+        return api.SendAsync(HttpMethod.Put, PathOf(knownUsers.IdOf(name)), ValidRequest(), ifMatch);
     }
 
     [When("I activate the user {string}")]
@@ -93,6 +115,15 @@ public sealed class UserCommandSteps(ApiDriver api, KnownUsers knownUsers)
     {
         var user = await api.ReadJsonAsync<UserDetails>();
         api.Response.Headers.Location.ShouldNotBeNull().OriginalString.ShouldBe(PathOf(user.Id));
+    }
+
+    [Then("the response ETag is the version of the user returned")]
+    public async Task ThenTheResponseETagIsTheVersionOfTheUserReturnedAsync()
+    {
+        var user = await api.ReadJsonAsync<UserDetails>();
+        // The database gives the version (xmin) when it saves the user: 0 means it was not read back.
+        user.Version.ShouldNotBe(0u);
+        api.Response.Headers.ETag.ShouldNotBeNull().ToString().ShouldBe($"\"{user.Version}\"");
     }
 
     private static string PathOf(Guid id)

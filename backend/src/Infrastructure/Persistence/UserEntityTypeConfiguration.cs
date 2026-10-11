@@ -20,6 +20,8 @@ internal sealed class UserEntityTypeConfiguration : IEntityTypeConfiguration<Use
             address.Property(a => a.PostalCode).HasMaxLength(Address.PostalCodeLength).IsFixedLength();
             address.Property(a => a.City).HasMaxLength(Address.CityMaxLength);
         });
+        // Npgsql maps a uint row version to the xmin system column, which Postgres changes on every update.
+        builder.Property(user => user.Version).IsRowVersion();
         // A deleted user is invisible to every query, so every read and update of one answers "not found".
         builder.HasQueryFilter(user => user.DeletedAt == null);
     }

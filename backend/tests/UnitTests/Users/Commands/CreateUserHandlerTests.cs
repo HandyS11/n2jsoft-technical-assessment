@@ -51,7 +51,8 @@ public sealed class CreateUserHandlerTests
             "Martin",
             new UserAddress("5 rue Victor Hugo", "33000", "Bordeaux"),
             8,
-            IsActive: true));
+            IsActive: true,
+            Version: 0));
     }
 
     [Fact]

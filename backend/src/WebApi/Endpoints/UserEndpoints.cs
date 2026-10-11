@@ -1,9 +1,12 @@
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using Application.Exceptions;
 using Application.Paging;
 using Application.Users;
 using Application.Users.Commands;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 using WebApi.Endpoints.Requests;
 
 namespace WebApi.Endpoints;
@@ -22,15 +25,22 @@ internal static class UserEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
         users.MapPost("/", CreateUserAsync)
             .ProducesValidationProblem();
+        // 409 on every change: another request saved the user while this one was changing it. 412 on PUT: the user
+        // changed since the version given in If-Match.
         users.MapPut("/{id:guid}", UpdateUserAsync)
             .ProducesValidationProblem()
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status412PreconditionFailed);
         users.MapPost("/{id:guid}/activate", ActivateUserAsync)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
         users.MapPost("/{id:guid}/deactivate", DeactivateUserAsync)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
         users.MapDelete("/{id:guid}", DeleteUserAsync)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         return endpoints;
     }
@@ -49,16 +59,19 @@ internal static class UserEndpoints
     private static async Task<Ok<UserDetails>> GetUserAsync(
         Guid id,
         IUserStore userStore,
+        HttpResponse response,
         CancellationToken cancellationToken)
     {
         var user = await userStore.GetDetailsAsync(id, cancellationToken).ConfigureAwait(false)
                    ?? throw new NotFoundException("User", id);
+        response.Headers.ETag = EntityTagOf(user);
         return TypedResults.Ok(user);
     }
 
     private static async Task<Created<UserDetails>> CreateUserAsync(
         SaveUserRequest request,
         CreateUserHandler handler,
+        HttpResponse response,
         CancellationToken cancellationToken)
     {
         var user = await handler.HandleAsync(
@@ -69,13 +82,19 @@ internal static class UserEndpoints
                     request.MonthlyExpenseQuota),
                 cancellationToken)
             .ConfigureAwait(false);
+        response.Headers.ETag = EntityTagOf(user);
         return TypedResults.Created(new Uri($"/v1/users/{user.Id}", UriKind.Relative), user);
     }
 
+    /// <summary>
+    /// A full replacement. With If-Match set to the user's version (its ETag), the update is refused with 412 when
+    /// the user changed since it was read; without it, the update overwrites whatever is stored.
+    /// </summary>
     private static async Task<NoContent> UpdateUserAsync(
         Guid id,
         SaveUserRequest request,
         UpdateUserHandler handler,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
         CancellationToken cancellationToken)
     {
         await handler.HandleAsync(
@@ -84,7 +103,8 @@ internal static class UserEndpoints
                     request.FirstName,
                     request.LastName,
                     request.Address.ToAddress(),
-                    request.MonthlyExpenseQuota),
+                    request.MonthlyExpenseQuota,
+                    ExpectedVersionOf(ifMatch)),
                 cancellationToken)
             .ConfigureAwait(false);
         return TypedResults.NoContent();
@@ -122,5 +142,29 @@ internal static class UserEndpoints
     {
         await handler.HandleAsync(new DeleteUserCommand(id), cancellationToken).ConfigureAwait(false);
         return TypedResults.NoContent();
+    }
+
+    private static string EntityTagOf(UserDetails user)
+    {
+        return new EntityTagHeaderValue($"\"{user.Version}\"").ToString();
+    }
+
+    /// <summary>Null for no If-Match or "*" (any version); a 400 for a value that is not one of our ETags.</summary>
+    private static uint? ExpectedVersionOf(string? ifMatch)
+    {
+        if (string.IsNullOrEmpty(ifMatch) || ifMatch == "*")
+        {
+            return null;
+        }
+
+        if (EntityTagHeaderValue.TryParse(ifMatch, out var entityTag)
+            && !entityTag.IsWeak
+            && uint.TryParse(entityTag.Tag.AsSpan(1, entityTag.Tag.Length - 2), CultureInfo.InvariantCulture,
+                out var version))
+        {
+            return version;
+        }
+
+        throw new BadHttpRequestException("If-Match must be \"*\" or the ETag of the user.");
     }
 }

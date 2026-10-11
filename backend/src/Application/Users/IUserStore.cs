@@ -18,6 +18,10 @@ public interface IUserStore
 
     void Add(User user);
 
-    /// <summary>Saves every change of the request, whatever store made it (they share one DbContext).</summary>
+    /// <summary>
+    /// Saves every change of the request, whatever store made it (they share one DbContext); throws
+    /// <see cref="Exceptions.ConcurrencyConflictException" /> when a changed user was saved by another request since
+    /// it was read.
+    /// </summary>
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

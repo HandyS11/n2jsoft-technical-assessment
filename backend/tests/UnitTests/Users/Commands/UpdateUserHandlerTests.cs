@@ -31,6 +31,35 @@ public sealed class UpdateUserHandlerTests
     }
 
     [Fact]
+    public async Task Replaces_the_details_when_the_expected_version_is_the_stored_one()
+    {
+        var user = User.Create("Juste", "Leblanc", Paris, 10);
+        _userStore.FindAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+
+        await CreateHandler().HandleAsync(
+            new UpdateUserCommand(user.Id, "Marc", "Assin", Lyon, 3, ExpectedVersion: user.Version),
+            TestContext.Current.CancellationToken);
+
+        user.FirstName.ShouldBe("Marc");
+        await _userStore.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Throws_a_conflict_when_the_user_changed_since_the_expected_version_without_saving()
+    {
+        var user = User.Create("Juste", "Leblanc", Paris, 10);
+        _userStore.FindAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+
+        var exception = await Should.ThrowAsync<ConcurrencyConflictException>(() => CreateHandler().HandleAsync(
+            new UpdateUserCommand(user.Id, "Marc", "Assin", Lyon, 3, ExpectedVersion: user.Version + 1),
+            TestContext.Current.CancellationToken));
+
+        exception.Message.ShouldBe($"User '{user.Id}' was changed by another request.");
+        user.FirstName.ShouldBe("Juste");
+        await _userStore.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Throws_not_found_for_an_unknown_user_without_saving()
     {
         var id = Guid.NewGuid();

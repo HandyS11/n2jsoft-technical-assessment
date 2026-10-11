@@ -138,6 +138,10 @@ Réalisé :
   activation et désactivation (`POST …/activate`, `…/deactivate`, sans erreur si le statut est déjà le bon),
   suppression logique (`DELETE`). Un utilisateur supprimé disparaît partout : toute requête le concernant répond
   `404`.
+- **Concurrence optimiste** : le détail d'un utilisateur porte sa `version` (la colonne système `xmin` de
+  Postgres), aussi renvoyée en `ETag`. Un `PUT` avec `If-Match` est refusé en `412` si l'utilisateur a changé
+  depuis sa lecture ; le formulaire l'envoie toujours. Toute écriture enregistrée par-dessus une modification
+  concurrente répond `409`.
 - **Accès aux données** : un « store » par fonctionnalité (`IUserStore` dans `Application`, implémenté sur le
   `DbContext` dans `Infrastructure`) sert les lectures et les écritures. Pas de repository ni d'`IUnitOfWork` :
   le `DbContext` est déjà une unité de travail. Un handler par cas d'usage en écriture.

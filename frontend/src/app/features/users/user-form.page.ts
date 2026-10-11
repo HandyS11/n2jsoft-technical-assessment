@@ -36,6 +36,9 @@ function saveErrorMessage(error: unknown): string {
   if (error instanceof HttpErrorResponse && error.status === 400) {
     return 'Les informations saisies sont invalides.';
   }
+  if (error instanceof HttpErrorResponse && (error.status === 409 || error.status === 412)) {
+    return "L'utilisateur a été modifié entre-temps. Rechargez la page pour repartir de ses dernières informations.";
+  }
   return "L'enregistrement a échoué. Veuillez réessayer.";
 }
 
@@ -104,6 +107,8 @@ export default class UserFormPage {
   protected readonly loaded = signal(this.id === null);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
+  /** The version of the user being edited, as loaded. */
+  private version = 0;
 
   private readonly formBuilder = inject(NonNullableFormBuilder);
   protected readonly form = this.formBuilder.group({
@@ -131,6 +136,7 @@ export default class UserFormPage {
             city: user.address.city,
             monthlyExpenseQuota: user.monthlyExpenseQuota,
           });
+          this.version = user.version;
           this.loaded.set(true);
         },
         error: (error: unknown) =>
@@ -170,7 +176,7 @@ export default class UserFormPage {
       monthlyExpenseQuota: value.monthlyExpenseQuota ?? 0,
     };
     const request: Observable<unknown> =
-      this.id === null ? this.api.create(user) : this.api.update(this.id, user);
+      this.id === null ? this.api.create(user) : this.api.update(this.id, user, this.version);
 
     this.saving.set(true);
     this.error.set(null);
