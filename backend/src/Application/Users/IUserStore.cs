@@ -9,7 +9,8 @@ namespace Application.Users;
 /// </summary>
 public interface IUserStore
 {
-    Task<PagedResult<UserSummary>> ListAsync(PageRequest request, CancellationToken cancellationToken);
+    /// <summary>Every user when <paramref name="isActive" /> is null, otherwise only the active or the inactive ones.</summary>
+    Task<PagedResult<UserSummary>> ListAsync(PageRequest request, bool? isActive, CancellationToken cancellationToken);
 
     Task<UserDetails?> GetDetailsAsync(Guid id, CancellationToken cancellationToken);
 

@@ -42,6 +42,11 @@ Feature: API documentation
       | post   | /v1/expense-reports       | 422    |
       | delete | /v1/expense-reports/{id}  | 404    |
 
+  Scenario: The v1 OpenAPI document describes the active filter of the users list
+    Given the API runs in the Development environment
+    When I request "/openapi/v1.json"
+    Then the OpenAPI document declares the query parameter "isActive" for "get" on "/v1/users"
+
   Scenario: The Scalar reference is served in Development
     Given the API runs in the Development environment
     When I request "/scalar/"

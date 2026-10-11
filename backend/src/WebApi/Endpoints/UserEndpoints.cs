@@ -49,9 +49,10 @@ internal static class UserEndpoints
         IUserStore userStore,
         CancellationToken cancellationToken,
         [Range(1, PageRequest.MaxPage)] int page = 1,
-        [Range(1, PageRequest.MaxPageSize)] int pageSize = PageRequest.DefaultPageSize)
+        [Range(1, PageRequest.MaxPageSize)] int pageSize = PageRequest.DefaultPageSize,
+        bool? isActive = null)
     {
-        var users = await userStore.ListAsync(new PageRequest(page, pageSize), cancellationToken)
+        var users = await userStore.ListAsync(new PageRequest(page, pageSize), isActive, cancellationToken)
             .ConfigureAwait(false);
         return TypedResults.Ok(users);
     }

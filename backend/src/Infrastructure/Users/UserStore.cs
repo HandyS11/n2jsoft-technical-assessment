@@ -9,9 +9,17 @@ namespace Infrastructure.Users;
 
 internal sealed class UserStore(AppDbContext dbContext) : IUserStore
 {
-    public async Task<PagedResult<UserSummary>> ListAsync(PageRequest request, CancellationToken cancellationToken)
+    public async Task<PagedResult<UserSummary>> ListAsync(
+        PageRequest request,
+        bool? isActive,
+        CancellationToken cancellationToken)
     {
         var users = dbContext.Set<User>().AsNoTracking();
+        if (isActive is { } active)
+        {
+            users = users.Where(user => user.IsActive == active);
+        }
+
         var totalCount = await users.CountAsync(cancellationToken).ConfigureAwait(false);
         var items = await users
             .OrderBy(user => user.LastName)

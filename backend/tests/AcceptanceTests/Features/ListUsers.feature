@@ -37,10 +37,11 @@ Feature: List users
     Then the response is a problem with status 400
 
     Examples:
-      | query         |
-      | page=0        |
-      | pageSize=0    |
-      | pageSize=101  |
+      | query          |
+      | page=0         |
+      | pageSize=0     |
+      | pageSize=101   |
+      | isActive=maybe |
 
   Scenario: Listing shows each user's city, monthly quota and status, but not deleted users
     Given the following users exist
@@ -55,3 +56,21 @@ Feature: List users
       | Marc Assin    | Lyon  | 5             | Inactive |
       | Juste Leblanc | Paris | 10            | Active   |
     And the listing reports 2 users in total
+
+  Scenario Outline: Listing only the active, or only the inactive, users
+    Given the following users exist
+      | First name | Last name | Status   |
+      | Juste      | Leblanc   | Active   |
+      | Marc       | Assin     | Inactive |
+      | Albert     | Leblanc   | Deleted  |
+    When I request "/v1/users?isActive=<isActive>"
+    Then the response status is 200
+    And the users listed are
+      | Name   |
+      | <name> |
+    And the listing reports 1 users in total
+
+    Examples:
+      | isActive | name          |
+      | true     | Juste Leblanc |
+      | false    | Marc Assin    |
