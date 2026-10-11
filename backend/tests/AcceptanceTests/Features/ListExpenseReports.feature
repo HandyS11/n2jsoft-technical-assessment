@@ -74,7 +74,12 @@ Feature: List expense reports
     When I update the user "Juste Leblanc" with
       | First name | Last name | Street           | Postal code | City  | Monthly quota |
       | Justine    | Leblanc   | 12 rue de Rivoli | 75001       | Paris | 10            |
-    And I list the expense reports
+    Then the response status is 204
+    When I list the expense reports
     Then the expense reports listed are
       | Title                        | Month   |
       | Juste Leblanc - Octobre 2025 | 2025-10 |
+    When I get the expense report "Juste Leblanc - Octobre 2025"
+    Then the expense report returned is
+      | Title                        | User          | Month   |
+      | Juste Leblanc - Octobre 2025 | Juste Leblanc | 2025-10 |
