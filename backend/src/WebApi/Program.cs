@@ -2,6 +2,7 @@ using Application;
 using Asp.Versioning;
 using Infrastructure;
 using Scalar.AspNetCore;
+using WebApi;
 using WebApi.Endpoints;
 using WebApi.Errors;
 using WebApi.Telemetry;
@@ -61,6 +62,6 @@ app.UseHttpsRedirection();
 app.MapUserEndpoints();
 app.MapExpenseReportEndpoints();
 app.MapExpenseEndpoints();
-app.MapHealthChecks("/health");
+app.MapHealthChecks(HealthProbes.Path);
 
 await app.RunAsync().ConfigureAwait(false);
