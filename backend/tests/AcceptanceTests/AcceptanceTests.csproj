@@ -7,6 +7,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+        <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
         <PackageReference Include="Reqnroll.xunit.v3" />
         <PackageReference Include="Respawn" />
         <PackageReference Include="Testcontainers.PostgreSql" />

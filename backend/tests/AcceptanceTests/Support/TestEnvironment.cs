@@ -1,7 +1,10 @@
 using Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using OpenTelemetry.Trace;
 using Respawn;
 using Testcontainers.PostgreSql;
 
@@ -16,6 +19,8 @@ public static class TestEnvironment
     private static ApiFactory? _factory;
     private static Respawner? _respawner;
     private static WebApplicationFactory<Program>? _developmentFactory;
+    private static WebApplicationFactory<Program>? _telemetryFactory;
+    private static WebApplicationFactory<Program>? _unreachableCollectorFactory;
 
     public static WebApplicationFactory<Program> Factory =>
         _factory ?? throw new InvalidOperationException("The test environment is not started.");
@@ -26,6 +31,24 @@ public static class TestEnvironment
     /// </summary>
     public static WebApplicationFactory<Program> DevelopmentFactory =>
         _developmentFactory ??= Factory.WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
+
+    /// <summary>The spans exported by <see cref="TelemetryFactory" />, for the telemetry scenarios.</summary>
+    public static RecordedSpans RecordedSpans { get; } = [];
+
+    /// <summary>
+    /// Built on first use: only the telemetry scenarios need it. Adds an in-memory exporter to the tracing the API sets
+    /// up itself, so its instrumentation and filters apply as they do under Aspire.
+    /// </summary>
+    public static WebApplicationFactory<Program> TelemetryFactory =>
+        _telemetryFactory ??= Factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.AddOpenTelemetry().WithTracing(tracing => tracing.AddInMemoryExporter(RecordedSpans))));
+
+    /// <summary>
+    /// Built on first use: exports over OTLP, as under Aspire, to a port nothing listens on (the dashboard stopped).
+    /// </summary>
+    public static WebApplicationFactory<Program> UnreachableCollectorFactory =>
+        _unreachableCollectorFactory ??= Factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:9"));
 
     private static string ConnectionString =>
         _postgres?.GetConnectionString() ?? throw new InvalidOperationException("Postgres is not started.");
@@ -69,6 +92,16 @@ public static class TestEnvironment
 
     public static async Task StopAsync()
     {
+        if (_unreachableCollectorFactory is not null)
+        {
+            await _unreachableCollectorFactory.DisposeAsync();
+        }
+
+        if (_telemetryFactory is not null)
+        {
+            await _telemetryFactory.DisposeAsync();
+        }
+
         if (_developmentFactory is not null)
         {
             await _developmentFactory.DisposeAsync();

@@ -25,6 +25,18 @@ public sealed class ApiDriver : IDisposable
         _client = TestEnvironment.DevelopmentFactory.CreateClient();
     }
 
+    public void UseTelemetryRecording()
+    {
+        _client.Dispose();
+        _client = TestEnvironment.TelemetryFactory.CreateClient();
+    }
+
+    public void UseUnreachableCollector()
+    {
+        _client.Dispose();
+        _client = TestEnvironment.UnreachableCollectorFactory.CreateClient();
+    }
+
     public Task GetAsync(string path)
     {
         return SendAsync(HttpMethod.Get, path);

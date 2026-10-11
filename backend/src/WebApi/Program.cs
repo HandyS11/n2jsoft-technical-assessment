@@ -4,9 +4,11 @@ using Infrastructure;
 using Scalar.AspNetCore;
 using WebApi.Endpoints;
 using WebApi.Errors;
+using WebApi.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddTelemetry();
 builder.AddInfrastructure();
 builder.Services.AddApplication();
 builder.Services.AddErrorHandling(builder.Environment);
