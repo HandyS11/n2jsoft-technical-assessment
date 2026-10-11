@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { pagedList } from '../../core/paged-list';
+import { PaginationComponent } from '../../core/pagination.component';
 import { UserSummary } from './user-summary';
 import { UsersApi } from './users.api';
 
@@ -8,7 +9,7 @@ const pageSize = 20;
 
 @Component({
   selector: 'app-user-list-page',
-  imports: [RouterLink],
+  imports: [PaginationComponent, RouterLink],
   template: `
     <div class="mb-4 flex items-center justify-between">
       <h1 class="text-2xl font-semibold">Utilisateurs</h1>
@@ -50,19 +51,7 @@ const pageSize = 20;
             }
           </tbody>
         </table>
-        <nav aria-label="Pagination" class="mt-4 flex items-center gap-4">
-          <button type="button" [disabled]="list.busy() || page.page <= 1" (click)="list.load(page.page - 1)">
-            Précédent
-          </button>
-          <span>Page {{ page.page }} sur {{ list.pageCount() }}</span>
-          <button
-            type="button"
-            [disabled]="list.busy() || page.page >= list.pageCount()"
-            (click)="list.load(page.page + 1)"
-          >
-            Suivant
-          </button>
-        </nav>
+        <app-pagination [list]="list" />
       } @else {
         <p>Aucun utilisateur.</p>
       }

@@ -6,6 +6,7 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { catchError, EMPTY, Subject, switchMap } from 'rxjs';
 import { pagedList } from '../../core/paged-list';
+import { PaginationComponent } from '../../core/pagination.component';
 import { businessRuleCode } from '../../core/problem-details';
 import { UserSummary } from '../users/user-summary';
 import { UsersApi } from '../users/users.api';
@@ -58,7 +59,7 @@ function isUnavailableUser(error: unknown): boolean {
 
 @Component({
   selector: 'app-expense-report-list-page',
-  imports: [CurrencyPipe, ReactiveFormsModule, RouterLink],
+  imports: [CurrencyPipe, PaginationComponent, ReactiveFormsModule, RouterLink],
   template: `
     <h1 class="mb-4 text-2xl font-semibold">Notes de frais</h1>
 
@@ -133,19 +134,7 @@ function isUnavailableUser(error: unknown): boolean {
             }
           </tbody>
         </table>
-        <nav aria-label="Pagination" class="mt-4 flex items-center gap-4">
-          <button type="button" [disabled]="list.busy() || page.page <= 1" (click)="list.load(page.page - 1)">
-            Précédent
-          </button>
-          <span>Page {{ page.page }} sur {{ list.pageCount() }}</span>
-          <button
-            type="button"
-            [disabled]="list.busy() || page.page >= list.pageCount()"
-            (click)="list.load(page.page + 1)"
-          >
-            Suivant
-          </button>
-        </nav>
+        <app-pagination [list]="list" />
       } @else {
         <p>Aucune note de frais.</p>
       }
