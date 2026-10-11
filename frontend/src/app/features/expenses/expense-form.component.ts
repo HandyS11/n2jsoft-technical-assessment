@@ -128,6 +128,8 @@ export class ExpenseFormComponent {
   /** The expense to edit, as loaded; undefined to add one. */
   readonly expense = input<ExpenseDetails>();
 
+  /** A valid expense is being sent: what the page said about the previous one no longer holds. */
+  readonly submitted = output<void>();
   /** An expense was added or changed; the form is empty again, ready for the next one. */
   readonly saved = output<'created' | 'updated'>();
   readonly cancelled = output<void>();
@@ -226,6 +228,7 @@ export class ExpenseFormComponent {
 
     this.saving.set(true);
     this.error.set(null);
+    this.submitted.emit();
     request.subscribe({
       next: () => {
         this.saving.set(false);

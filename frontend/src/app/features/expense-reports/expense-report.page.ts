@@ -49,6 +49,7 @@ function expenseCount(count: number): string {
             [year]="report.year"
             [month]="report.month"
             [expense]="editing()"
+            (submitted)="notice.set(null)"
             (saved)="onSaved($event)"
             (cancelled)="editing.set(undefined)"
             (reportChanged)="loadReport()"

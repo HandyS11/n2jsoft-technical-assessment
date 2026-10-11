@@ -360,6 +360,42 @@ describe('ExpenseReportPage', () => {
       );
     });
 
+    it('drops the notice of the last save once the next one is refused', async () => {
+      const expensesApi = fakeExpensesApi();
+      const page = await render(fakeApi(), expensesApi);
+      const form = page.form() as HTMLElement;
+      const submitValidExpense = async () => {
+        for (const [id, value] of [
+          ['date', '2025-10-15'],
+          ['description', 'Taxi'],
+          ['amount', '10'],
+          ['street', '12 rue de Rivoli'],
+          ['postalCode', '75001'],
+          ['city', 'Paris'],
+        ]) {
+          const input = form.querySelector(`#${id}`) as HTMLInputElement;
+          input.value = value;
+          input.dispatchEvent(new Event('input'));
+        }
+        form.querySelector('form')?.dispatchEvent(new Event('submit'));
+        page.harness.detectChanges();
+        await page.harness.fixture.whenStable();
+        page.harness.detectChanges();
+      };
+      await submitValidExpense();
+      expect(page.status()).toBe('Dépense ajoutée.');
+      expensesApi.create.mockImplementation(() =>
+        throwError(() => new HttpErrorResponse({ status: 422, error: { code: 'expense.quota_exceeded' } }))
+      );
+
+      await submitValidExpense();
+
+      expect(page.status()).toBeUndefined();
+      expect(page.alert()).toBe(
+        "Le quota mensuel de dépenses de cet utilisateur est atteint : impossible d'ajouter cette dépense."
+      );
+    });
+
     it('shows a read-only report without the form nor the expense actions', async () => {
       const api = fakeApi();
       api.get.mockImplementation(() => of({ ...october, isReadOnly: true }));
