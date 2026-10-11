@@ -3,6 +3,7 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
 import { appRoutes } from './app.routes';
+import { ExpenseReportsApi } from './features/expense-reports/expense-reports.api';
 import { UsersApi } from './features/users/users.api';
 
 describe('appRoutes', () => {
@@ -14,6 +15,7 @@ describe('appRoutes', () => {
           provide: UsersApi,
           useValue: {
             list: () => of({ items: [], page: 1, pageSize: 20, totalCount: 0 }),
+            listAllActive: () => of([]),
             get: () =>
               of({
                 id: '1',
@@ -25,24 +27,43 @@ describe('appRoutes', () => {
               }),
           },
         },
+        {
+          provide: ExpenseReportsApi,
+          useValue: {
+            list: () => of({ items: [], page: 1, pageSize: 20, totalCount: 0 }),
+          },
+        },
       ],
     });
   });
 
-  it('opens the users page at the root', async () => {
+  it('opens the expense reports page at the root', async () => {
     const harness = await RouterTestingHarness.create();
 
     await harness.navigateByUrl('/');
 
-    expect(TestBed.inject(Router).url).toBe('/users');
+    expect(TestBed.inject(Router).url).toBe('/expense-reports');
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(
+      'Notes de frais'
+    );
   });
 
-  it('redirects an unknown URL to the users page', async () => {
+  it('redirects an unknown URL to the expense reports page', async () => {
     const harness = await RouterTestingHarness.create();
 
     await harness.navigateByUrl('/page-inconnue');
 
-    expect(TestBed.inject(Router).url).toBe('/users');
+    expect(TestBed.inject(Router).url).toBe('/expense-reports');
+  });
+
+  it('opens the users page at /users', async () => {
+    const harness = await RouterTestingHarness.create();
+
+    await harness.navigateByUrl('/users');
+
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(
+      'Utilisateurs'
+    );
   });
 
   it('opens the creation form at /users/new', async () => {

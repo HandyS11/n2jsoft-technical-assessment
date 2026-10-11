@@ -10,12 +10,14 @@ describe('App', () => {
     }).compileComponents();
   });
 
-  it('links to the users page from the navigation', () => {
+  it('links to the expense reports, then to the users, from the navigation', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
-    const link = (fixture.nativeElement as HTMLElement).querySelector('nav a');
+    const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('nav a'));
 
-    expect(link?.textContent?.trim()).toBe('Utilisateurs');
-    expect(link?.getAttribute('href')).toBe('/users');
+    expect(links.map((link) => [link.textContent?.trim(), link.getAttribute('href')])).toEqual([
+      ['Notes de frais', '/expense-reports'],
+      ['Utilisateurs', '/users'],
+    ]);
   });
 });
