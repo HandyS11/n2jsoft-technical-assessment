@@ -15,68 +15,42 @@ internal sealed class ExpenseReportStore(AppDbContext dbContext) : IExpenseRepor
     {
         var reports = dbContext.Set<ExpenseReport>().AsNoTracking();
         var totalCount = await reports.CountAsync(cancellationToken).ConfigureAwait(false);
-        var items = await reports
+        var page = reports
             .OrderByDescending(report => report.Year)
             .ThenByDescending(report => report.Month)
             .ThenBy(report => report.Title)
             // Reports sharing a title (two users with the same name) keep the same order from one page to the next.
             .ThenBy(report => report.Id)
             .Skip(request.Skip)
-            .Take(request.PageSize)
-            .Select(report => new ExpenseReportSummary(
-                report.Id,
-                report.Title,
-                report.Year,
-                report.Month,
-                // The expenses' query filter applies here too: deleted expenses are left out.
-                dbContext.Set<Expense>().Count(expense => expense.ExpenseReportId == report.Id),
-                dbContext.Set<Expense>()
-                    .Where(expense => expense.ExpenseReportId == report.Id)
-                    .Sum(expense => expense.Amount)))
+            .Take(request.PageSize);
+        var items = await WithExpenses(page)
+            .Select(row => new ExpenseReportSummary(
+                row.Report.Id,
+                row.Report.Title,
+                row.Report.Year,
+                row.Report.Month,
+                row.ExpenseCount,
+                row.Total))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return new PagedResult<ExpenseReportSummary>(items, request.Page, request.PageSize, totalCount);
     }
 
-    public async Task<ExpenseReportDetails?> GetDetailsAsync(Guid id, CancellationToken cancellationToken)
+    public Task<ExpenseReportDetails?> GetDetailsAsync(Guid id, CancellationToken cancellationToken)
     {
-        var report = await dbContext.Set<ExpenseReport>()
+        var reports = dbContext.Set<ExpenseReport>()
             .AsNoTracking()
-            .Where(report => report.Id == id)
-            .Select(report => new
-            {
-                report.Id,
-                report.Title,
-                report.UserId,
-                report.Year,
-                report.Month,
-                ExpenseCount = dbContext.Set<Expense>().Count(expense => expense.ExpenseReportId == report.Id),
-                Total = dbContext.Set<Expense>()
-                    .Where(expense => expense.ExpenseReportId == report.Id)
-                    .Sum(expense => expense.Amount),
-            })
-            .SingleOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-        if (report is null)
-        {
-            return null;
-        }
-
-        // A query of its own: IgnoreQueryFilters would also bring the deleted expenses back into the counts above.
-        var user = await dbContext.Set<User>()
-            .IgnoreQueryFilters()
-            .AsNoTracking()
-            .Where(user => user.Id == report.UserId)
-            .Select(user => new
-            {
-                user.MonthlyExpenseQuota, IsDeleted = user.DeletedAt != null
-            })
-            .SingleAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        return new ExpenseReportDetails(report.Id, report.Title, report.UserId, report.Year, report.Month,
-            report.ExpenseCount, report.Total, user.MonthlyExpenseQuota, user.IsDeleted);
+            // A deleted user's report is still shown, read-only. Only the users' filter is lifted: deleted expenses
+            // stay out of the counts.
+            .IgnoreQueryFilters([QueryFilters.NotDeletedUsers])
+            .Where(report => report.Id == id);
+        return (
+                from row in WithExpenses(reports)
+                join user in dbContext.Set<User>() on row.Report.UserId equals user.Id
+                select new ExpenseReportDetails(row.Report.Id, row.Report.Title, row.Report.UserId, row.Report.Year,
+                    row.Report.Month, row.ExpenseCount, row.Total, user.MonthlyExpenseQuota, user.DeletedAt != null))
+            .SingleOrDefaultAsync(cancellationToken);
     }
 
     public Task<bool> ExistsAsync(Guid userId, ReportMonth period, CancellationToken cancellationToken)
@@ -117,5 +91,35 @@ internal sealed class ExpenseReportStore(AppDbContext dbContext) : IExpenseRepor
     public Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         return dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Each report with the count and the total of its expenses, both read in one pass over them. The expenses' query
+    /// filter applies: deleted ones are left out.
+    /// </summary>
+    private IQueryable<ReportWithExpenses> WithExpenses(IQueryable<ExpenseReport> reports)
+    {
+        return from report in reports
+            from expenses in dbContext.Set<Expense>()
+                .Where(expense => expense.ExpenseReportId == report.Id)
+                .GroupBy(expense => expense.ExpenseReportId)
+                .Select(sameReport => new
+                {
+                    Count = (int?)sameReport.Count(), Total = (decimal?)sameReport.Sum(expense => expense.Amount)
+                })
+                // A report without expenses has no group: its count and total are 0.
+                .DefaultIfEmpty()
+            select new ReportWithExpenses
+            {
+                Report = report, ExpenseCount = expenses.Count ?? 0, Total = expenses.Total ?? 0m
+            };
+    }
+
+    /// <summary>Set by member initialization, not by a constructor, so that EF Core can query further through it.</summary>
+    private sealed class ReportWithExpenses
+    {
+        public required ExpenseReport Report { get; init; }
+        public required int ExpenseCount { get; init; }
+        public required decimal Total { get; init; }
     }
 }

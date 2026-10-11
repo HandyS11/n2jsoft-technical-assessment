@@ -28,7 +28,7 @@ internal sealed class ExpenseEntityTypeConfiguration : IEntityTypeConfiguration<
         // Npgsql maps a uint row version to the xmin system column, which Postgres changes on every update.
         builder.Property(expense => expense.Version).IsRowVersion();
         // A deleted expense is invisible to every query: it is neither listed, counted against the quota, nor changed.
-        builder.HasQueryFilter(expense => expense.DeletedAt == null);
+        builder.HasQueryFilter(QueryFilters.NotDeletedExpenses, expense => expense.DeletedAt == null);
         // No navigation: the database deletes a report's expenses with it, deleted ones included, without EF Core
         // loading them.
         builder.HasOne<ExpenseReport>()
