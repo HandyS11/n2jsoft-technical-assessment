@@ -36,6 +36,10 @@ internal static class ExpenseEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status412PreconditionFailed)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        expenses.MapDelete("/{id:guid}", DeleteExpenseAsync)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         return endpoints;
     }
@@ -117,6 +121,16 @@ internal static class ExpenseEndpoints
                     EntityTags.ExpectedVersionOf(ifMatch)),
                 cancellationToken)
             .ConfigureAwait(false);
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<NoContent> DeleteExpenseAsync(
+        Guid reportId,
+        Guid id,
+        DeleteExpenseHandler handler,
+        CancellationToken cancellationToken)
+    {
+        await handler.HandleAsync(new DeleteExpenseCommand(reportId, id), cancellationToken).ConfigureAwait(false);
         return TypedResults.NoContent();
     }
 }

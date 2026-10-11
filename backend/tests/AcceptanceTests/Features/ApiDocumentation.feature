@@ -56,6 +56,9 @@ Feature: API documentation
       | put    | /v1/expense-reports/{reportId}/expenses/{id} | 409    |
       | put    | /v1/expense-reports/{reportId}/expenses/{id} | 412    |
       | put    | /v1/expense-reports/{reportId}/expenses/{id} | 422    |
+      | delete | /v1/expense-reports/{reportId}/expenses/{id} | 404    |
+      | delete | /v1/expense-reports/{reportId}/expenses/{id} | 409    |
+      | delete | /v1/expense-reports/{reportId}/expenses/{id} | 422    |
 
   Scenario: The v1 OpenAPI document describes the active filter of the users list
     Given the API runs in the Development environment

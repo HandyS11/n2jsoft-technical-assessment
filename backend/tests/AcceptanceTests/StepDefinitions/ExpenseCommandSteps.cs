@@ -134,6 +134,19 @@ public sealed class ExpenseCommandSteps(
             _entityTagRead.ShouldNotBeNull());
     }
 
+    [When("I delete the expense {string}")]
+    public Task WhenIDeleteTheExpenseAsync(string description)
+    {
+        var (reportId, id) = knownExpenses.Of(description);
+        return api.SendAsync(HttpMethod.Delete, ExpensePaths.Of(reportId, id));
+    }
+
+    [When("I delete an unknown expense of {string}")]
+    public Task WhenIDeleteAnUnknownExpenseOfAsync(string title)
+    {
+        return api.SendAsync(HttpMethod.Delete, ExpensePaths.Of(knownReports.IdOf(title), Guid.NewGuid()));
+    }
+
     [Then("the response locates the created expense")]
     public async Task ThenTheResponseLocatesTheCreatedExpenseAsync()
     {

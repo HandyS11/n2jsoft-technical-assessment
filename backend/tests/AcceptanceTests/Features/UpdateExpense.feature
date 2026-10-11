@@ -45,6 +45,11 @@ Feature: Update an expense
     And I update the expense "Taxi" to the date "2025-10-20"
     Then the response is a business rule violation with the code "expense_report.deleted_user"
 
+  Scenario: Updating a deleted expense answers not found
+    When I delete the expense "Taxi"
+    And I update the expense "Taxi" to the date "2025-10-20"
+    Then the response is a problem with status 404
+
   Scenario: Updating an unknown expense answers not found
     When I update an unknown expense of "Juste Leblanc - Octobre 2025"
     Then the response is a problem with status 404
