@@ -5,7 +5,7 @@ import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, of, Subject, throwError } from 'rxjs';
 import { PagedResult } from '../../core/paged-result';
 import { ExpenseDetails, ExpenseSummary } from '../expenses/expense';
 import { ExpensesApi } from '../expenses/expenses.api';
@@ -35,6 +35,8 @@ const taxi: ExpenseSummary = {
   billingAddress: { storeName: 'G7', street: '12 rue de Rivoli', postalCode: '75001', city: 'Paris' },
 };
 const taxiDetails: ExpenseDetails = { ...taxi, version: 7 };
+const train: ExpenseSummary = { ...taxi, id: 'e2', description: 'Train' };
+const trainDetails: ExpenseDetails = { ...train, version: 3 };
 
 function expensePage(items: ExpenseSummary[], page = 1, totalCount = items.length): PagedResult<ExpenseSummary> {
   return { items, page, pageSize: 5, totalCount };
@@ -172,6 +174,36 @@ describe('ExpenseReportPage', () => {
 
       expect(page.alert()).toBe('Impossible de charger la note de frais.');
     });
+
+    it('shows the latest read of the report, even when an earlier one answers last', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const api = fakeApi();
+      const page = await render(api);
+      const reads = [new Subject<ExpenseReportDetails>(), new Subject<ExpenseReportDetails>()];
+      api.get.mockImplementationOnce(() => reads[0]).mockImplementationOnce(() => reads[1]);
+      await page.click(page.button('Supprimer', page.rows()[0]));
+      await page.click(page.button('Supprimer', page.rows()[0]));
+
+      reads[1].next({ ...october, expenseCount: 1 });
+      reads[0].next({ ...october, expenseCount: 2 });
+      page.harness.detectChanges();
+
+      expect(text(page.element())).toContain('1 dépense sur 10 ce mois-ci');
+    });
+
+    it('drops the load error once the report is read again', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const api = fakeApi();
+      const page = await render(api);
+      api.get.mockImplementationOnce(() => httpError(500));
+      await page.click(page.button('Supprimer', page.rows()[0]));
+      expect(page.alert()).toBe('Impossible de charger la note de frais.');
+
+      await page.click(page.button('Supprimer', page.rows()[0]));
+
+      expect(page.alert()).toBeUndefined();
+      expect(page.heading()).toBe('Juste Leblanc - Octobre 2025');
+    });
   });
 
   describe('report deletion', () => {
@@ -287,6 +319,48 @@ describe('ExpenseReportPage', () => {
       expect(expensesApi.get).toHaveBeenCalledWith('1', 'e1');
       expect(text(page.form()?.querySelector('h2'))).toBe('Modifier la dépense');
       expect((page.form()?.querySelector('#description') as HTMLInputElement).value).toBe('Taxi');
+    });
+
+    it('edits the last expense asked for, even when an earlier one answers last', async () => {
+      const expensesApi = fakeExpensesApi();
+      expensesApi.list.mockImplementation(() => of(expensePage([taxi, train])));
+      const loads = new Map([
+        ['e1', new Subject<ExpenseDetails>()],
+        ['e2', new Subject<ExpenseDetails>()],
+      ]);
+      expensesApi.get.mockImplementation((_reportId: string, id: string) => loads.get(id) as Subject<ExpenseDetails>);
+      const page = await render(fakeApi(), expensesApi);
+      await page.click(page.button('Modifier', page.rows()[0]));
+      await page.click(page.button('Modifier', page.rows()[1]));
+
+      loads.get('e2')?.next(trainDetails);
+      loads.get('e1')?.next(taxiDetails);
+      page.harness.detectChanges();
+
+      expect((page.form()?.querySelector('#description') as HTMLInputElement).value).toBe('Train');
+    });
+
+    it('says so when the expense to edit was deleted meanwhile, and reloads the list', async () => {
+      const expensesApi = fakeExpensesApi();
+      expensesApi.get.mockImplementation(() => httpError(404));
+      const page = await render(fakeApi(), expensesApi);
+
+      await page.click(page.button('Modifier', page.rows()[0]));
+
+      expect(page.status()).toBe('Dépense introuvable.');
+      expect(expensesApi.list).toHaveBeenCalledTimes(2);
+      expect(text(page.form()?.querySelector('h2'))).toBe('Nouvelle dépense');
+    });
+
+    it('says so when the expense to edit cannot be loaded', async () => {
+      const expensesApi = fakeExpensesApi();
+      expensesApi.get.mockImplementation(() => httpError(500));
+      const page = await render(fakeApi(), expensesApi);
+
+      await page.click(page.button('Modifier', page.rows()[0]));
+
+      expect(page.status()).toBe('Impossible de charger la dépense. Veuillez réessayer.');
+      expect(text(page.form()?.querySelector('h2'))).toBe('Nouvelle dépense');
     });
 
     it('reloads the expenses and the header once an expense is changed', async () => {

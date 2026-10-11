@@ -1,8 +1,9 @@
 import { CurrencyPipe, formatDate } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, LOCALE_ID, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { catchError, EMPTY, finalize, Observable, of, Subject, switchMap } from 'rxjs';
 import { pagedList } from '../../core/paged-list';
 import { ExpenseDetails, ExpenseSummary, formatBillingAddress } from '../expenses/expense';
 import { ExpenseFormComponent } from '../expenses/expense-form.component';
@@ -28,7 +29,10 @@ function expenseCount(count: number): string {
   imports: [CurrencyPipe, ExpenseFormComponent, RouterLink],
   template: `
     <a routerLink="/expense-reports" class="underline">← Notes de frais</a>
-    @if (error(); as message) {
+    @if (loadError(); as message) {
+      <p role="alert">{{ message }}</p>
+    }
+    @if (deleteError(); as message) {
       <p role="alert">{{ message }}</p>
     }
     @if (report(); as report) {
@@ -51,7 +55,7 @@ function expenseCount(count: number): string {
             [expense]="editing()"
             (submitted)="notice.set(null)"
             (saved)="onSaved($event)"
-            (cancelled)="editing.set(undefined)"
+            (cancelled)="stopEditing()"
             (reportChanged)="loadReport()"
           />
         }
@@ -125,7 +129,7 @@ function expenseCount(count: number): string {
           <p>Chargement…</p>
         }
       </section>
-    } @else if (!error()) {
+    } @else if (!loadError()) {
       <p>Chargement…</p>
     }
   `,
@@ -137,13 +141,18 @@ export default class ExpenseReportPage {
   private readonly locale = inject(LOCALE_ID);
   private readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
   protected readonly report = signal<ExpenseReportDetails | undefined>(undefined);
-  protected readonly error = signal<string | null>(null);
+  /** Why the report could not be read, until it is read again. */
+  protected readonly loadError = signal<string | null>(null);
+  protected readonly deleteError = signal<string | null>(null);
   protected readonly deleting = signal(false);
   /** The expense the form edits, as loaded; undefined while the form adds one. */
   protected readonly editing = signal<ExpenseDetails | undefined>(undefined);
   /** What the last change did ("Dépense ajoutée."), until the next one. */
   protected readonly notice = signal<string | null>(null);
   protected readonly expenses = pagedList((page) => this.expensesApi.list(this.id, page, expensesPerPage));
+  private readonly reportReads = new Subject<void>();
+  /** The id of the expense to load into the form, or undefined to go back to adding one. */
+  private readonly editRequests = new Subject<string | undefined>();
 
   /** "Octobre 2025", capitalised like the month in the title (the locale writes "octobre 2025"). */
   protected readonly monthLabel = computed(() => {
@@ -167,18 +176,35 @@ export default class ExpenseReportPage {
   });
 
   constructor() {
+    this.reportReads
+      .pipe(
+        // Only the latest read counts: an answer arriving late must not replace the report read since.
+        switchMap(() => this.api.get(this.id).pipe(catchError((error: unknown) => this.reportLoadFailed(error)))),
+        takeUntilDestroyed()
+      )
+      .subscribe((report) => {
+        this.report.set(report);
+        this.loadError.set(null);
+      });
+    this.editRequests
+      .pipe(
+        // Only the last expense asked for is edited: an answer arriving late must not load another one in the form.
+        switchMap((expenseId) =>
+          expenseId === undefined
+            ? of(undefined)
+            : this.expensesApi
+                .get(this.id, expenseId)
+                .pipe(catchError((error: unknown) => this.expenseLoadFailed(error)))
+        ),
+        takeUntilDestroyed()
+      )
+      .subscribe((expense) => this.editing.set(expense));
     this.loadReport();
   }
 
   /** Reads the report again: its counts and total after a change, or its read-only state. */
   protected loadReport(): void {
-    this.api.get(this.id).subscribe({
-      next: (report) => this.report.set(report),
-      error: (error: unknown) =>
-        this.error.set(
-          isNotFound(error) ? 'Note de frais introuvable.' : 'Impossible de charger la note de frais.'
-        ),
-    });
+    this.reportReads.next();
   }
 
   /** "mercredi 15 octobre 2025". A "2025-10-15" date is read as a local day, never shifted by a time zone. */
@@ -191,21 +217,19 @@ export default class ExpenseReportPage {
   }
 
   protected onSaved(change: 'created' | 'updated'): void {
-    this.editing.set(undefined);
+    this.stopEditing();
     this.notice.set(change === 'created' ? 'Dépense ajoutée.' : 'Dépense modifiée.');
     this.reloadExpenses();
   }
 
   protected edit(expense: ExpenseSummary): void {
     this.notice.set(null);
-    this.expensesApi.get(this.id, expense.id).subscribe({
-      next: (details) => this.editing.set(details),
-      error: () => {
-        // Most likely deleted meanwhile: the list shows what is left.
-        this.notice.set('Dépense introuvable.');
-        this.reloadExpenses();
-      },
-    });
+    this.editRequests.next(expense.id);
+  }
+
+  /** Back to adding an expense; an expense still loading is not put in the form. */
+  protected stopEditing(): void {
+    this.editRequests.next(undefined);
   }
 
   protected removeExpense(expense: ExpenseSummary): void {
@@ -214,7 +238,7 @@ export default class ExpenseReportPage {
     }
     this.notice.set(null);
     if (this.editing()?.id === expense.id) {
-      this.editing.set(undefined);
+      this.stopEditing();
     }
     // Whether it worked or not, the counts and the read-only state may have changed.
     this.expenses.run(this.expensesApi.delete(this.id, expense.id).pipe(finalize(() => this.loadReport())));
@@ -225,7 +249,7 @@ export default class ExpenseReportPage {
       return;
     }
     this.deleting.set(true);
-    this.error.set(null);
+    this.deleteError.set(null);
     this.api.delete(report.id).subscribe({
       next: () => {
         void this.router.navigateByUrl('/expense-reports');
@@ -237,7 +261,7 @@ export default class ExpenseReportPage {
           return;
         }
         this.deleting.set(false);
-        this.error.set('La suppression a échoué. Veuillez réessayer.');
+        this.deleteError.set('La suppression a échoué. Veuillez réessayer.');
       },
     });
   }
@@ -245,5 +269,21 @@ export default class ExpenseReportPage {
   private reloadExpenses(): void {
     this.expenses.load(this.expenses.page()?.page ?? 1);
     this.loadReport();
+  }
+
+  private reportLoadFailed(error: unknown): Observable<never> {
+    this.loadError.set(isNotFound(error) ? 'Note de frais introuvable.' : 'Impossible de charger la note de frais.');
+    return EMPTY;
+  }
+
+  private expenseLoadFailed(error: unknown): Observable<never> {
+    if (isNotFound(error)) {
+      // Deleted meanwhile: the list shows what is left.
+      this.notice.set('Dépense introuvable.');
+      this.reloadExpenses();
+    } else {
+      this.notice.set('Impossible de charger la dépense. Veuillez réessayer.');
+    }
+    return EMPTY;
   }
 }
