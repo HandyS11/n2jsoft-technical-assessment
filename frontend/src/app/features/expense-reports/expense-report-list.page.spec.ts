@@ -1,4 +1,7 @@
+import { registerLocaleData } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import localeFr from '@angular/common/locales/fr';
+import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -10,6 +13,8 @@ import { ExpenseReportDetails } from './expense-report-details';
 import ExpenseReportListPage from './expense-report-list.page';
 import { ExpenseReportSummary } from './expense-report-summary';
 import { ExpenseReportsApi } from './expense-reports.api';
+
+registerLocaleData(localeFr);
 
 const juste: UserSummary = {
   id: 'u1',
@@ -30,12 +35,16 @@ const october: ExpenseReportSummary = {
   title: 'Juste Leblanc - Octobre 2025',
   year: 2025,
   month: 10,
+  expenseCount: 3,
+  total: 1234.5,
 };
 const september: ExpenseReportSummary = {
   id: '2',
   title: 'Juste Leblanc - Septembre 2025',
   year: 2025,
   month: 9,
+  expenseCount: 0,
+  total: 0,
 };
 const monthMessage = 'Indiquez un mois au format AAAA-MM, entre 2000-01 et 2100-12.';
 const inactiveUserMessage = 'Cet utilisateur est inactif : il ne peut pas être affecté à une note de frais.';
@@ -62,7 +71,17 @@ function fakeReportsApi(
     list: vi.fn(list),
     create: vi.fn(
       (): Observable<ExpenseReportDetails> =>
-        of({ id: '9', title: 'Juste Leblanc - Octobre 2025', userId: 'u1', year: 2025, month: 10 })
+        of({
+          id: '9',
+          title: 'Juste Leblanc - Octobre 2025',
+          userId: 'u1',
+          year: 2025,
+          month: 10,
+          expenseCount: 0,
+          total: 0,
+          monthlyExpenseQuota: 5,
+          isReadOnly: false,
+        })
     ),
     delete: vi.fn((): Observable<void> => of(undefined)),
   };
@@ -81,6 +100,7 @@ async function render(reportsApi = fakeReportsApi(), usersApi = fakeUsersApi()) 
       ]),
       { provide: ExpenseReportsApi, useValue: reportsApi },
       { provide: UsersApi, useValue: usersApi },
+      { provide: LOCALE_ID, useValue: 'fr-FR' },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -161,6 +181,15 @@ describe('ExpenseReportListPage', () => {
 
       expect(page.rows()).toEqual(['Juste Leblanc - Octobre 2025', 'Juste Leblanc - Septembre 2025']);
       expect(page.linkOf(0)).toBe('/expense-reports/1');
+    });
+
+    it('shows the number of expenses and the total of each report', async () => {
+      const page = await render();
+
+      const cells = Array.from(page.element().querySelectorAll('tbody tr')[0].querySelectorAll('td')).map((cell) =>
+        (cell.textContent ?? '').replace(/\s+/g, ' ').trim()
+      );
+      expect(cells.slice(0, 3)).toEqual(['Juste Leblanc - Octobre 2025', '3', '1 234,50 €']);
     });
 
     it('asks the API for the first page of 20 reports', async () => {

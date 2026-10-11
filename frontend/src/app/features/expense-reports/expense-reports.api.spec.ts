@@ -19,6 +19,10 @@ const details: ExpenseReportDetails = {
   ...october,
   id,
   title: 'Juste Leblanc - Octobre 2025',
+  expenseCount: 0,
+  total: 0,
+  monthlyExpenseQuota: 10,
+  isReadOnly: false,
 };
 
 describe('ExpenseReportsApi', () => {

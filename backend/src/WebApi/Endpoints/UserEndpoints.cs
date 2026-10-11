@@ -1,12 +1,10 @@
 using System.ComponentModel.DataAnnotations;
-using System.Globalization;
 using Application.Exceptions;
 using Application.Paging;
 using Application.Users;
 using Application.Users.Commands;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Net.Http.Headers;
 using WebApi.Endpoints.Requests;
 
 namespace WebApi.Endpoints;
@@ -87,7 +85,7 @@ internal static class UserEndpoints
     {
         var user = await userStore.GetDetailsAsync(id, cancellationToken).ConfigureAwait(false)
                    ?? throw new NotFoundException("User", id);
-        response.Headers.ETag = EntityTagOf(user);
+        response.Headers.ETag = EntityTags.Of(user.Version);
         return TypedResults.Ok(user);
     }
 
@@ -105,7 +103,7 @@ internal static class UserEndpoints
                     request.MonthlyExpenseQuota),
                 cancellationToken)
             .ConfigureAwait(false);
-        response.Headers.ETag = EntityTagOf(user);
+        response.Headers.ETag = EntityTags.Of(user.Version);
         return TypedResults.Created(new Uri($"/v1/users/{user.Id}", UriKind.Relative), user);
     }
 
@@ -127,7 +125,7 @@ internal static class UserEndpoints
                     request.LastName,
                     request.Address.ToAddress(),
                     request.MonthlyExpenseQuota,
-                    ExpectedVersionOf(ifMatch)),
+                    EntityTags.ExpectedVersionOf(ifMatch)),
                 cancellationToken)
             .ConfigureAwait(false);
         return TypedResults.NoContent();
@@ -165,29 +163,5 @@ internal static class UserEndpoints
     {
         await handler.HandleAsync(new DeleteUserCommand(id), cancellationToken).ConfigureAwait(false);
         return TypedResults.NoContent();
-    }
-
-    private static string EntityTagOf(UserDetails user)
-    {
-        return new EntityTagHeaderValue($"\"{user.Version}\"").ToString();
-    }
-
-    /// <summary>Null for no If-Match or "*" (any version); a 400 for a value that is not one of our ETags.</summary>
-    private static uint? ExpectedVersionOf(string? ifMatch)
-    {
-        if (string.IsNullOrEmpty(ifMatch) || ifMatch == "*")
-        {
-            return null;
-        }
-
-        if (EntityTagHeaderValue.TryParse(ifMatch, out var entityTag)
-            && !entityTag.IsWeak
-            && uint.TryParse(entityTag.Tag.AsSpan(1, entityTag.Tag.Length - 2), CultureInfo.InvariantCulture,
-                out var version))
-        {
-            return version;
-        }
-
-        throw new BadHttpRequestException("If-Match must be \"*\" or the ETag of the user.");
     }
 }

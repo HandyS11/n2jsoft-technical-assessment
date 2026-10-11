@@ -27,7 +27,7 @@ internal sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbC
             var resource = entry.Metadata.ClrType.Name;
             var key = entry.Property("Id").CurrentValue!;
             // Reports are never updated: a report missing on save was deleted by another request since it was read.
-            // A user is checked through its row version: another request saved it since it was read.
+            // A user or an expense is checked through its row version: another request saved it since it was read.
             throw entry.Entity is ExpenseReport
                 ? new NotFoundException(resource, key, exception)
                 : new ConcurrencyConflictException(resource, key, exception);
@@ -44,7 +44,8 @@ internal sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbC
         base.OnModelCreating(modelBuilder);
         modelBuilder
             .ApplyConfiguration(new UserEntityTypeConfiguration())
-            .ApplyConfiguration(new ExpenseReportEntityTypeConfiguration());
+            .ApplyConfiguration(new ExpenseReportEntityTypeConfiguration())
+            .ApplyConfiguration(new ExpenseEntityTypeConfiguration());
     }
 
     internal static async Task SeedAsync(DbContext context, CancellationToken cancellationToken)

@@ -19,7 +19,7 @@ done, then brainstorms only what is new.
 | 1 | Foundation      | Clean Architecture restructure, API versioning, OpenAPI + Scalar, error contract, Redis removal, 3 backend test tiers, frontend shell, CI split | —          | Done        | [foundation](specs/2026-10-10-foundation-design.md), [plan](plans/2026-10-10-foundation.md) |
 | 2 | Users           | Full user model (address, active flag, monthly expense quota, soft delete), CRUD API, users management UI                                       | 1          | Done        | [users](specs/2026-10-11-users-design.md), [plan](plans/2026-10-11-users.md) |
 | 3 | Expense Reports | Report entity, generated title "Prénom Nom - Mois Année", create from user + month (active users only), physical delete, reports list page       | 2          | Done        | [expense reports](specs/2026-10-11-expense-reports-design.md), [plan](plans/2026-10-11-expense-reports.md) |
-| 4 | Expenses        | Expense entity and validation, monthly quota rule, edit, soft delete, report page with add form and expenses in pages of 5                     | 3          | Not started | —                                                            |
+| 4 | Expenses        | Expense entity and validation, monthly quota rule, edit, soft delete, report page with add form and expenses in pages of 5                     | 3          | Done        | [expenses](specs/2026-10-11-expenses-design.md), [plan](plans/2026-10-11-expenses.md) |
 | 5 | Wrap-up         | Final "Mes Notes", polish, private GitHub repo + invite `n2jsoft-hr-cr`                                                                            | 4          | Not started | —                                                            |
 
 ## Conventions every slice inherits
@@ -44,6 +44,10 @@ These are decided in the Foundation spec; slices follow them unless their own sp
   request can break between the check and the save (uniqueness) is also enforced by a database constraint, which
   the store maps to the same exception; its race is tested at the store level (two DI scopes, both read, then both
   save). The UI reads the code with `businessRuleCode` (`core/problem-details.ts`) and maps it to French.
+- **Rules over a count** (the monthly quota): the handler locks the parent row (`FOR UPDATE`) in its transaction
+  before counting, and always locks in the same order (report, then user), so concurrent writes run one after the
+  other. The race is tested with two concurrent HTTP requests while another connection holds the parent's lock, released
+  once both wait on it (`DatabaseLocks`): without the handler's lock, both would pass the count.
 - **API:** URL-segment versioning, all endpoints under `/v1/...`; the Angular app calls `/api/v1/...`
   through the dev proxy. Lists are paged: `?page=&pageSize=` (1-based, default 20, at most 100) returning
   `PagedResult<T>` (`items`, `page`, `pageSize`, `totalCount`).
@@ -74,9 +78,4 @@ Settled in the [Expense Reports spec](specs/2026-10-11-expense-reports-design.md
 
 ### Expenses
 
-- Must the expense date fall within its report's month?
-- Is the quota counted per expense date month, and are soft-deleted expenses excluded from it?
-- Does editing an expense (e.g. moving its date) re-check the quota?
-- Amount precision and sign (`decimal(18,2)`, strictly positive?).
-- Billing address shape ("enseigne / rue + code postal + ville").
-- "Par lot de 5": numbered pages or "load more"?
+Settled in the [Expenses spec](specs/2026-10-11-expenses-design.md#decisions).

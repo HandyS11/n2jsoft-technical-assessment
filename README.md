@@ -196,6 +196,43 @@ Hypothèses (le sujet ne précise pas) :
 - Supprimer une note de frais supprimera aussi ses dépenses (tranche 4).
 - Les notes de frais d'un utilisateur supprimé restent visibles, avec leur intitulé d'origine.
 
+### Tranche 4 — Dépenses
+
+Réalisé :
+
+- **Modèle** : une dépense (`Expense`) appartient à une note de frais. Elle a une date, une description (50
+  caractères au plus), un montant en euros (de 0,01 à 999 999,99 €, deux décimales au plus, jamais arrondi) et une
+  adresse de facturation (`BillingAddress` : une enseigne facultative, puis la rue, le code postal et la ville, avec
+  les règles de l'adresse d'un utilisateur). Elle reste modifiable et se supprime logiquement.
+- **Règles métier** (`422` avec un `code`) : la date tombe dans le mois de la note
+  (`expense.date_outside_report_month`) ; une dépense au-delà du quota mensuel de l'utilisateur est refusée
+  (`expense.quota_exceeded`) ; la note d'un utilisateur supprimé passe en lecture seule
+  (`expense_report.deleted_user`).
+- **Concurrence** : chaque écriture d'une dépense verrouille la note (`SELECT … FOR UPDATE`), puis l'utilisateur
+  (`FOR SHARE`), jusqu'à l'enregistrement. Deux ajouts simultanés pour la dernière place du quota donnent une
+  dépense et un `422`, jamais deux dépenses ; un ajout voit la suppression de l'utilisateur faite en même temps. Une
+  modification envoie la version lue (`If-Match`) : `412` si la dépense a changé entre-temps.
+- **API** sous `/v1/expense-reports/{reportId}/expenses` : liste paginée (par date), détail (avec `ETag`), ajout
+  (`201` + `Location`), modification (`PUT`) et suppression logique (`DELETE`). Une dépense n'est trouvée que par sa
+  propre note. La liste et le détail des notes donnent le nombre de dépenses et leur total ; le détail donne aussi
+  le quota de l'utilisateur et indique si la note est en lecture seule. Supprimer une note supprime ses dépenses
+  (cascade en base).
+- **Front** : la page d'une note affiche le nombre de dépenses au regard du quota (« 3 dépenses sur 10 ce
+  mois-ci ») et leur total, un formulaire d'ajout qui sert aussi à la modification, et les dépenses par lots de 5,
+  datées au format « mercredi 15 octobre 2025 ». Une note en lecture seule n'affiche ni formulaire ni actions sur
+  ses dépenses. La liste des notes affiche le nombre de dépenses et le total de chacune.
+
+Hypothèses (le sujet ne précise pas) :
+
+- La date d'une dépense tombe dans le mois de sa note : le quota mensuel se compte donc sur la note.
+- Le quota compte les dépenses non supprimées : supprimer une dépense libère une place. Une modification ne le
+  vérifie pas : elle ne peut pas changer de mois. Le quota appliqué est celui de l'utilisateur au moment de l'ajout.
+- La note d'un utilisateur inactif reste modifiable ; celle d'un utilisateur supprimé passe en lecture seule (elle
+  peut toujours être supprimée).
+- Le montant va de 0,01 à 999 999,99 €, avec deux décimales au plus ; l'enseigne est facultative (100 caractères
+  au plus).
+- « Par lot de 5 » : des pages numérotées de 5 dépenses, de la plus ancienne à la plus récente.
+
 ### Lancer les tests
 
 | Niveau                                      | Commande                                                   | Prérequis       |
@@ -222,5 +259,5 @@ Hypothèses (le sujet ne précise pas) :
   lancer l'application.
 - Ajouter un health check Aspire sur `webapi`. Il sonde l'endpoint https, et échoue donc tant que le certificat
   de développement ASP.NET Core n'est pas approuvé (c'est le cas en CI) : le front attendrait indéfiniment.
-- Mutualiser la pagination des listes (utilisateurs, notes de frais) dans un composant partagé : la logique est
-  aujourd'hui dupliquée dans les deux pages.
+- Extraire la barre de pagination (*Précédent* / *Suivant*, « Page X sur Y ») dans un composant partagé : elle est
+  répétée sur les trois listes (utilisateurs, notes de frais, dépenses).

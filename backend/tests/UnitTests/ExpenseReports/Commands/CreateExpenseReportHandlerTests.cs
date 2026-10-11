@@ -106,7 +106,11 @@ public sealed class CreateExpenseReportHandlerTests
             "Juste Leblanc - Octobre 2025",
             _juste.Id,
             2025,
-            10));
+            10,
+            0,
+            0m,
+            10,
+            false));
     }
 
     [Fact]

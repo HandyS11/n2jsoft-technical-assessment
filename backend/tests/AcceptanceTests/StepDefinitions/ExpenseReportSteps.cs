@@ -1,3 +1,4 @@
+using System.Globalization;
 using AcceptanceTests.Support;
 using Application.ExpenseReports;
 using Application.Paging;
@@ -75,6 +76,16 @@ public sealed class ExpenseReportSteps(ApiDriver api, KnownUsers knownUsers, Kno
             .ShouldBe(table.Rows.Select(row => (row["Title"], row["Month"])));
     }
 
+    [Then("the expense reports listed with their expenses are")]
+    public async Task ThenTheExpenseReportsListedWithTheirExpensesAreAsync(DataTable table)
+    {
+        var reports = await api.ReadJsonAsync<PagedResult<ExpenseReportSummary>>();
+        reports.Items
+            .Select(report => (report.Title, report.ExpenseCount, Amounts.Format(report.Total)))
+            .ShouldBe(table.Rows.Select(row => (row["Title"],
+                int.Parse(row["Expenses"], CultureInfo.InvariantCulture), row["Total"])));
+    }
+
     [Then("no expense report is listed")]
     public async Task ThenNoExpenseReportIsListedAsync()
     {
@@ -99,6 +110,33 @@ public sealed class ExpenseReportSteps(ApiDriver api, KnownUsers knownUsers, Kno
             () => report.Title.ShouldBe(expected["Title"]),
             () => report.UserId.ShouldBe(knownUsers.IdOf(expected["User"])),
             () => Months.Format(report.Year, report.Month).ShouldBe(expected["Month"]));
+    }
+
+    [Then("the expense report returned holds {int} expenses totalling {string}")]
+    public async Task ThenTheExpenseReportReturnedHoldsExpensesTotallingAsync(int expenseCount, string total)
+    {
+        var report = await api.ReadJsonAsync<ExpenseReportDetails>();
+        report.ExpenseCount.ShouldBe(expenseCount);
+        Amounts.Format(report.Total).ShouldBe(total);
+    }
+
+    [Then("the expense report returned allows {int} expenses a month")]
+    public async Task ThenTheExpenseReportReturnedAllowsExpensesAMonthAsync(int monthlyExpenseQuota)
+    {
+        var report = await api.ReadJsonAsync<ExpenseReportDetails>();
+        report.MonthlyExpenseQuota.ShouldBe(monthlyExpenseQuota);
+    }
+
+    [Then("the expense report returned is read-only")]
+    public async Task ThenTheExpenseReportReturnedIsReadOnlyAsync()
+    {
+        (await api.ReadJsonAsync<ExpenseReportDetails>()).IsReadOnly.ShouldBeTrue();
+    }
+
+    [Then("the expense report returned is not read-only")]
+    public async Task ThenTheExpenseReportReturnedIsNotReadOnlyAsync()
+    {
+        (await api.ReadJsonAsync<ExpenseReportDetails>()).IsReadOnly.ShouldBeFalse();
     }
 
     [Then("the expense report {string} is no longer stored")]

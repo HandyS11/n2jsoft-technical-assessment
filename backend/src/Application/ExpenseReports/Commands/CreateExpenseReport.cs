@@ -33,7 +33,7 @@ public sealed class CreateExpenseReportHandler(
                 var report = ExpenseReport.Create(user, command.Period);
                 expenseReportStore.Add(report);
                 await expenseReportStore.SaveChangesAsync(token).ConfigureAwait(false);
-                return ExpenseReportDetails.From(report);
+                return ExpenseReportDetails.From(report, user);
             },
             cancellationToken);
     }
