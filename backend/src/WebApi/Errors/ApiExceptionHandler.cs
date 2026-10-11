@@ -18,6 +18,15 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetailsS
             {
                 Status = StatusCodes.Status404NotFound, Title = "Resource not found", Detail = notFound.Message,
             },
+            // A rule the request validation did not catch, checked by the domain object itself.
+            InvalidValueException invalid => new HttpValidationProblemDetails(
+                new Dictionary<string, string[]>
+                {
+                    [invalid.ParameterName] = [invalid.Message]
+                })
+            {
+                Status = StatusCodes.Status400BadRequest,
+            },
             BusinessRuleViolationException violation => new ProblemDetails
             {
                 Status = StatusCodes.Status422UnprocessableEntity,

@@ -1,3 +1,4 @@
+using Domain.Exceptions;
 using Domain.ValueObjects;
 
 namespace UnitTests.ValueObjects;
@@ -25,7 +26,8 @@ public sealed class AddressTests
     [InlineData("   ")]
     public void Rejects_a_blank_street(string street)
     {
-        Should.Throw<ArgumentException>(() => new Address(street, "75001", "Paris")).ParamName.ShouldBe("street");
+        Should.Throw<InvalidValueException>(() => new Address(street, "75001", "Paris")).ParameterName
+            .ShouldBe("street");
     }
 
     [Fact]
@@ -33,7 +35,8 @@ public sealed class AddressTests
     {
         var street = new string('a', Address.StreetMaxLength + 1);
 
-        Should.Throw<ArgumentException>(() => new Address(street, "75001", "Paris")).ParamName.ShouldBe("street");
+        Should.Throw<InvalidValueException>(() => new Address(street, "75001", "Paris")).ParameterName
+            .ShouldBe("street");
     }
 
     [Fact]
@@ -52,8 +55,8 @@ public sealed class AddressTests
     [InlineData("٧٥٠٠١")]
     public void Rejects_a_postal_code_that_is_not_five_digits(string postalCode)
     {
-        Should.Throw<ArgumentException>(() => new Address("12 rue de Rivoli", postalCode, "Paris"))
-            .ParamName.ShouldBe("postalCode");
+        Should.Throw<InvalidValueException>(() => new Address("12 rue de Rivoli", postalCode, "Paris"))
+            .ParameterName.ShouldBe("postalCode");
     }
 
     [Theory]
@@ -61,7 +64,7 @@ public sealed class AddressTests
     [InlineData("   ")]
     public void Rejects_a_blank_city(string city)
     {
-        Should.Throw<ArgumentException>(() => new Address("12 rue de Rivoli", "75001", city)).ParamName
+        Should.Throw<InvalidValueException>(() => new Address("12 rue de Rivoli", "75001", city)).ParameterName
             .ShouldBe("city");
     }
 
@@ -70,7 +73,7 @@ public sealed class AddressTests
     {
         var city = new string('a', Address.CityMaxLength + 1);
 
-        Should.Throw<ArgumentException>(() => new Address("12 rue de Rivoli", "75001", city)).ParamName
+        Should.Throw<InvalidValueException>(() => new Address("12 rue de Rivoli", "75001", city)).ParameterName
             .ShouldBe("city");
     }
 }

@@ -1,4 +1,5 @@
 using Domain.Entities;
+using Domain.Exceptions;
 using Domain.ValueObjects;
 
 namespace UnitTests.Entities;
@@ -43,8 +44,8 @@ public sealed class UserTests
     [InlineData("   ")]
     public void Create_rejects_a_blank_first_name(string firstName)
     {
-        Should.Throw<ArgumentException>(() => User.Create(firstName, "Leblanc", Paris, 10))
-            .ParamName.ShouldBe("firstName");
+        Should.Throw<InvalidValueException>(() => User.Create(firstName, "Leblanc", Paris, 10))
+            .ParameterName.ShouldBe("firstName");
     }
 
     [Theory]
@@ -52,8 +53,8 @@ public sealed class UserTests
     [InlineData("   ")]
     public void Create_rejects_a_blank_last_name(string lastName)
     {
-        Should.Throw<ArgumentException>(() => User.Create("Juste", lastName, Paris, 10))
-            .ParamName.ShouldBe("lastName");
+        Should.Throw<InvalidValueException>(() => User.Create("Juste", lastName, Paris, 10))
+            .ParameterName.ShouldBe("lastName");
     }
 
     [Fact]
@@ -72,7 +73,8 @@ public sealed class UserTests
     {
         var name = new string('a', User.NameMaxLength + 1);
 
-        Should.Throw<ArgumentException>(() => User.Create(name, "Leblanc", Paris, 10)).ParamName.ShouldBe("firstName");
+        Should.Throw<InvalidValueException>(() => User.Create(name, "Leblanc", Paris, 10)).ParameterName
+            .ShouldBe("firstName");
     }
 
     [Fact]
@@ -86,8 +88,8 @@ public sealed class UserTests
     [InlineData(-1)]
     public void Create_rejects_a_monthly_quota_below_1(int monthlyExpenseQuota)
     {
-        Should.Throw<ArgumentOutOfRangeException>(() => User.Create("Juste", "Leblanc", Paris, monthlyExpenseQuota))
-            .ParamName.ShouldBe("monthlyExpenseQuota");
+        Should.Throw<InvalidValueException>(() => User.Create("Juste", "Leblanc", Paris, monthlyExpenseQuota))
+            .ParameterName.ShouldBe("monthlyExpenseQuota");
     }
 
     [Fact]
@@ -119,7 +121,8 @@ public sealed class UserTests
     {
         var user = User.Create("Juste", "Leblanc", Paris, 10);
 
-        Should.Throw<ArgumentException>(() => user.UpdateDetails("Marc", " ", Lyon, 3)).ParamName.ShouldBe("lastName");
+        Should.Throw<InvalidValueException>(() => user.UpdateDetails("Marc", " ", Lyon, 3)).ParameterName
+            .ShouldBe("lastName");
 
         user.FirstName.ShouldBe("Juste");
         user.LastName.ShouldBe("Leblanc");

@@ -117,7 +117,7 @@ Réalisé :
 - **OpenAPI + Scalar** en développement uniquement : un document par version, et un lien « Scalar » sur la
   ressource `webapi` du dashboard Aspire.
 - **Contrat d'erreur unique** (RFC 9457 ProblemDetails) :
-  - `400` pour la validation ;
+  - `400` pour la validation, celle de la requête comme celle du domaine (`errors` indexé par champ) ;
   - `404` pour une ressource introuvable ;
   - `422` pour une règle métier violée, avec un `code` stable que le front traduit en français ;
   - `500` sans détail technique hors développement.

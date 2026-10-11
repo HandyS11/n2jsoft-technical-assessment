@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Domain.Exceptions;
 
 namespace Domain;
 
@@ -13,13 +14,13 @@ internal static class Text
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new ArgumentException("The value must not be blank.", parameterName);
+            throw new InvalidValueException(parameterName, "The value must not be blank.");
         }
 
         var trimmed = value.Trim();
         if (trimmed.Length > maxLength)
         {
-            throw new ArgumentException($"The value must be at most {maxLength} characters.", parameterName);
+            throw new InvalidValueException(parameterName, $"The value must be at most {maxLength} characters.");
         }
 
         return trimmed;

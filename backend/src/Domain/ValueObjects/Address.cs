@@ -1,3 +1,5 @@
+using Domain.Exceptions;
+
 namespace Domain.ValueObjects;
 
 /// <summary>A French postal address: the street (with its number), a five-digit postal code and the city.</summary>
@@ -13,7 +15,7 @@ public sealed record Address
         PostalCode = postalCode.Trim();
         if (PostalCode.Length != PostalCodeLength || !PostalCode.All(char.IsAsciiDigit))
         {
-            throw new ArgumentException($"The postal code must be {PostalCodeLength} digits.", nameof(postalCode));
+            throw new InvalidValueException(nameof(postalCode), $"The postal code must be {PostalCodeLength} digits.");
         }
 
         City = Text.Required(city, CityMaxLength);

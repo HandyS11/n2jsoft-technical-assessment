@@ -1,3 +1,4 @@
+using Domain.Exceptions;
 using Domain.ValueObjects;
 
 namespace Domain.Entities;
@@ -39,7 +40,12 @@ public sealed class User
     public void UpdateDetails(string firstName, string lastName, Address address, int monthlyExpenseQuota)
     {
         ArgumentNullException.ThrowIfNull(address);
-        ArgumentOutOfRangeException.ThrowIfLessThan(monthlyExpenseQuota, 1);
+        if (monthlyExpenseQuota < 1)
+        {
+            throw new InvalidValueException(nameof(monthlyExpenseQuota),
+                "The monthly expense quota must be at least 1.");
+        }
+
         var trimmedFirstName = Text.Required(firstName, NameMaxLength);
         var trimmedLastName = Text.Required(lastName, NameMaxLength);
 

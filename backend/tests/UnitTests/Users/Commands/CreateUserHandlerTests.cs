@@ -1,6 +1,7 @@
 using Application.Users;
 using Application.Users.Commands;
 using Domain.Entities;
+using Domain.Exceptions;
 using Domain.ValueObjects;
 using NSubstitute;
 
@@ -50,7 +51,7 @@ public sealed class CreateUserHandlerTests
     [Fact]
     public async Task Rejects_invalid_details_without_saving()
     {
-        await Should.ThrowAsync<ArgumentOutOfRangeException>(() => CreateHandler().HandleAsync(
+        await Should.ThrowAsync<InvalidValueException>(() => CreateHandler().HandleAsync(
             new CreateUserCommand("Jeanne", "Martin", Bordeaux, 0),
             TestContext.Current.CancellationToken));
 
