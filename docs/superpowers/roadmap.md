@@ -59,8 +59,8 @@ These are decided in the Foundation spec; slices follow them unless their own sp
     *Given* arranges data through `AppDbContext`, *When* calls HTTP, *Then* asserts responses.
     Reuse ApiDriver and HttpSteps ("When I request …", "Then the response is a problem with status …").
   - *End-to-end* — Aspire.Hosting.Testing boots the AppHost, Playwright drives the Angular UI through
-    a few critical journeys per slice. Derive page tests from PageTest; the dev seed (Juste Leblanc, Marc Assin) is
-    present.
+    a few critical journeys per slice. Derive page tests from PageTest; the demo seed (30 users, among them Juste
+    Leblanc and Marc Assin, and a year of reports) is present, so find a list row with FindRowAsync, which pages.
   - *Frontend* — Vitest specs per page and API service.
 - **Frontend:** feature folders under `src/app/features/<feature>/`, standalone components with
   signals, lists paged through `pagedList` and `<app-pagination>`, UI text in French, `fr-FR` locale, Playwright

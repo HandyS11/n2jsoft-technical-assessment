@@ -113,6 +113,7 @@ public sealed class AppFixture : IAsyncLifetime
 
         var builder =
             await DistributedApplicationTestingBuilder.CreateAsync<Projects.N2JSoft_Aspire>(cancellationToken);
+        UseFreshDatabase(builder);
         _app = await builder.BuildAsync(cancellationToken);
         await _app.StartAsync(cancellationToken);
         AngularUrl = await WaitUntilReadyAsync(_app, cancellationToken);
@@ -122,6 +123,22 @@ public sealed class AppFixture : IAsyncLifetime
         {
             Headless = true
         });
+    }
+
+    /// <summary>
+    /// The AppHost keeps the database in a Docker volume between runs. Without it, every test run starts from the
+    /// seed, and the tests never read or change the data of a developer's own runs.
+    /// </summary>
+    private static void UseFreshDatabase(IDistributedApplicationTestingBuilder builder)
+    {
+        var postgres = builder.Resources.Single(resource => resource.Name == "postgres");
+        var volumes = postgres.Annotations.OfType<ContainerMountAnnotation>()
+            .Where(mount => mount.Type == ContainerMountType.Volume)
+            .ToList();
+        foreach (var volume in volumes)
+        {
+            postgres.Annotations.Remove(volume);
+        }
     }
 
     /// <summary>

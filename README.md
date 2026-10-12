@@ -24,6 +24,12 @@ dotnet run --project tools/N2JSoft.Aspire
 
 Aspire lance la bdd, le backend et le frontend. 
 
+Au premier lancement, la bdd reçoit des données de démonstration datées du jour : 30 utilisateurs (dont 3 inactifs),
+leurs notes de frais des douze derniers mois et leurs dépenses.
+
+La bdd est conservée d'un lancement à l'autre dans un volume Docker (`n2jsoft.aspire-<hash>-postgres-data`). Pour
+repartir des données de démonstration, supprimer ce volume (`docker volume ls`, puis `docker volume rm`).
+
 La console dotnet affiche le lien vers le dashboard Aspire pour consulter les services applicatifs.
 
 ### Critères d'évaluation

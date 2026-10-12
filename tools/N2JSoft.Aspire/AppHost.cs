@@ -1,6 +1,8 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var postgres = builder.AddPostgres("postgres");
+// The volume keeps the database between runs. The end-to-end tests remove it to start from the seed every time.
+var postgres = builder.AddPostgres("postgres")
+    .WithDataVolume();
 var mainDatabase = postgres.AddDatabase("database");
 
 var webapi = builder.AddProject<Projects.WebApi>("webapi")

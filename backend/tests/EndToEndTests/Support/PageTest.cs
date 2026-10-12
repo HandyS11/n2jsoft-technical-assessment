@@ -1,8 +1,9 @@
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 
 namespace EndToEndTests.Support;
 
-public abstract class PageTest(AppFixture fixture) : IAsyncLifetime
+public abstract partial class PageTest(AppFixture fixture) : IAsyncLifetime
 {
     private static readonly string ArtifactsDirectory =
         Path.Combine(AppContext.BaseDirectory, "playwright-artifacts");
@@ -52,6 +53,43 @@ public abstract class PageTest(AppFixture fixture) : IAsyncLifetime
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// The row holding <paramref name="text" /> in the list shown, paging with « Suivant » from the page shown: a list
+    /// shows 20 rows a page, and the demo data fills several.
+    /// </summary>
+    protected async Task<ILocator> FindRowAsync(string text)
+    {
+        var row = Page.GetByRole(AriaRole.Row).Filter(new()
+        {
+            HasText = text
+        });
+        var pagination = Page.GetByRole(AriaRole.Navigation, new()
+        {
+            Name = "Pagination"
+        });
+        var pageLabel = pagination.GetByText(PageLabel());
+        var next = pagination.GetByRole(AriaRole.Button, new()
+        {
+            Name = "Suivant"
+        });
+
+        // The bar shows with the first page.
+        await Assertions.Expect(pageLabel).ToBeVisibleAsync();
+        while (await row.CountAsync() == 0)
+        {
+            if (!await next.IsEnabledAsync())
+            {
+                throw new InvalidOperationException($"No row holds \"{text}\", up to the last page.");
+            }
+
+            var shown = await pageLabel.TextContentAsync() ?? string.Empty;
+            await next.ClickAsync();
+            await Assertions.Expect(pageLabel).Not.ToHaveTextAsync(shown);
+        }
+
+        return row;
+    }
+
     private static async Task SaveFailureArtifactsAsync(IBrowserContext context, IPage page)
     {
         Directory.CreateDirectory(ArtifactsDirectory);
@@ -81,6 +119,9 @@ public abstract class PageTest(AppFixture fixture) : IAsyncLifetime
             TestContext.Current.AddWarning($"The {artifact} of the failed test could not be saved: {e.Message}");
         }
     }
+
+    [GeneratedRegex(@"^Page \d+ sur \d+$")]
+    private static partial Regex PageLabel();
 
     private static string ArtifactName(string? testName)
     {

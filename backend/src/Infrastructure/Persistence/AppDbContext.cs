@@ -1,7 +1,6 @@
 using Application.Exceptions;
 using Domain.Entities;
 using Domain.Exceptions;
-using Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -50,15 +49,14 @@ internal sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbC
 
     internal static async Task SeedAsync(DbContext context, CancellationToken cancellationToken)
     {
-        // Soft-deleted users count: otherwise the demo users would be inserted again once all of them are deleted.
+        // Soft-deleted users count: otherwise the demo data would be inserted again once all the users are deleted.
         if (!await context.Set<User>().IgnoreQueryFilters().AnyAsync(cancellationToken).ConfigureAwait(false))
         {
-            await context.Set<User>().AddRangeAsync(
-                [
-                    User.Create("Juste", "Leblanc", new Address("12 rue de Rivoli", "75001", "Paris"), 10),
-                    User.Create("Marc", "Assin", new Address("3 place Bellecour", "69002", "Lyon"), 10),
-                ],
-                cancellationToken).ConfigureAwait(false);
+            var demoData = DemoData.Create(DateOnly.FromDateTime(TimeProvider.System.GetLocalNow().DateTime));
+            await context.Set<User>().AddRangeAsync(demoData.Users, cancellationToken).ConfigureAwait(false);
+            await context.Set<ExpenseReport>().AddRangeAsync(demoData.ExpenseReports, cancellationToken)
+                .ConfigureAwait(false);
+            await context.Set<Expense>().AddRangeAsync(demoData.Expenses, cancellationToken).ConfigureAwait(false);
             await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
