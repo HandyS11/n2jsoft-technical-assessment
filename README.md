@@ -11,8 +11,8 @@ Le TP utilise .NET Aspire pour configurer une bdd PostgreSQL, une webapi ASP.NET
 
 Il vous faudra donc :
 - Docker Desktop (ou similaire)
-- .NET 10 SDK avec ASP.NET
-- nodeJS >= 22.12
+- .NET 10 SDK avec ASP.NET (10.0.100 ou plus récent)
+- Node.js 22.22.3 ou plus récent en 22.x, 24.15.0 ou plus récent en 24.x, ou 26 et plus (exigé par Angular 22)
 
 ### Lancement
 
