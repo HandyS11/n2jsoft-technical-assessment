@@ -10,7 +10,7 @@ public sealed class UserManagementTests(AppFixture fixture) : PageTest(fixture)
     {
         var name = await CreateUserAsync("Jeanne", "Bordeaux");
 
-        var row = UserRow(name);
+        var row = await FindRowAsync(name);
         await Assertions.Expect(row).ToContainTextAsync("Bordeaux");
         await Assertions.Expect(row).ToContainTextAsync("Actif");
     }
@@ -20,7 +20,7 @@ public sealed class UserManagementTests(AppFixture fixture) : PageTest(fixture)
     {
         var name = await CreateUserAsync("Paul", "Bordeaux");
 
-        await UserRow(name).GetByRole(AriaRole.Link, new()
+        await (await FindRowAsync(name)).GetByRole(AriaRole.Link, new()
         {
             Name = "Modifier"
         }).ClickAsync();
@@ -30,14 +30,14 @@ public sealed class UserManagementTests(AppFixture fixture) : PageTest(fixture)
         await city.FillAsync("Toulouse");
         await SaveAsync();
 
-        await Assertions.Expect(UserRow(name)).ToContainTextAsync("Toulouse");
+        await Assertions.Expect(await FindRowAsync(name)).ToContainTextAsync("Toulouse");
     }
 
     [Fact]
     public async Task An_administrator_deactivates_then_deletes_a_user()
     {
         var name = await CreateUserAsync("Lucie", "Nantes");
-        var row = UserRow(name);
+        var row = await FindRowAsync(name);
 
         await row.GetByRole(AriaRole.Button, new()
         {
@@ -89,13 +89,5 @@ public sealed class UserManagementTests(AppFixture fixture) : PageTest(fixture)
             Name = "Enregistrer"
         }).ClickAsync();
         await Assertions.Expect(Page).ToHaveURLAsync(new Uri(Fixture.AngularUrl, "users").ToString());
-    }
-
-    private ILocator UserRow(string name)
-    {
-        return Page.GetByRole(AriaRole.Row).Filter(new()
-        {
-            HasText = name
-        });
     }
 }

@@ -53,10 +53,7 @@ public sealed partial class ExpenseReportManagementTests(AppFixture fixture) : P
         {
             Name = "← Notes de frais"
         }).ClickAsync();
-        var row = Page.GetByRole(AriaRole.Row).Filter(new()
-        {
-            HasText = name
-        });
+        var row = await FindRowAsync(name);
         await Assertions.Expect(row).ToHaveCountAsync(1);
 
         Page.Dialog += AcceptConfirmation;
