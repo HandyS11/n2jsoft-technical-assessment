@@ -40,7 +40,7 @@ describe('pagedList', () => {
   it('says so when a page cannot be loaded, until one loads', () => {
     let fails = true;
     const { list } = create((page) =>
-      fails ? throwError(() => new Error('Service unavailable')) : of(pageOf(['a'], page))
+      fails ? throwError(() => new Error('Service unavailable')) : of(pageOf(['a'], page)),
     );
     expect(list.failed()).toBe(true);
 
@@ -106,7 +106,7 @@ describe('pagedList', () => {
   it('is no longer busy when the page reloaded after an action cannot be loaded', () => {
     let fails = false;
     const { list } = create((page) =>
-      fails ? throwError(() => new Error('Service unavailable')) : of(pageOf(['a'], page))
+      fails ? throwError(() => new Error('Service unavailable')) : of(pageOf(['a'], page)),
     );
     fails = true;
 

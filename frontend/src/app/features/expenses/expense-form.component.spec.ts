@@ -29,7 +29,9 @@ function fakeApi() {
   };
 }
 
-function render(options: { api?: ReturnType<typeof fakeApi>; expense?: ExpenseDetails; year?: number; month?: number } = {}) {
+function render(
+  options: { api?: ReturnType<typeof fakeApi>; expense?: ExpenseDetails; year?: number; month?: number } = {},
+) {
   const api = options.api ?? fakeApi();
   TestBed.configureTestingModule({ providers: [{ provide: ExpensesApi, useValue: api }] });
   const fixture = TestBed.createComponent(ExpenseFormComponent);
@@ -130,7 +132,7 @@ describe('ExpenseFormComponent', () => {
 
       expect(form.api.create).toHaveBeenCalledWith(
         'r1',
-        expect.objectContaining({ billingAddress: expect.objectContaining({ storeName: 'G7' }) })
+        expect.objectContaining({ billingAddress: expect.objectContaining({ storeName: 'G7' }) }),
       );
     });
 
@@ -290,7 +292,7 @@ describe('ExpenseFormComponent', () => {
         'r1',
         'e1',
         expect.objectContaining({ amount: 30, billingAddress: expect.objectContaining({ storeName: 'G7' }) }),
-        7
+        7,
       );
       expect(form.saved).toHaveBeenCalledWith('updated');
     });

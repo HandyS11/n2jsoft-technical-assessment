@@ -17,14 +17,7 @@ import { UsersApi } from './users.api';
 const nameMaxLength = 100;
 const minMonthlyExpenseQuota = 1;
 
-const fields = [
-  'firstName',
-  'lastName',
-  'street',
-  'postalCode',
-  'city',
-  'monthlyExpenseQuota',
-] as const;
+const fields = ['firstName', 'lastName', 'street', 'postalCode', 'city', 'monthlyExpenseQuota'] as const;
 type Field = (typeof fields)[number];
 
 /**
@@ -174,9 +167,7 @@ export default class UserFormPage {
           this.loaded.set(true);
         },
         error: (error: unknown) =>
-          this.error.set(
-            hasStatus(error, 404) ? 'Utilisateur introuvable.' : "Impossible de charger l'utilisateur."
-          ),
+          this.error.set(hasStatus(error, 404) ? 'Utilisateur introuvable.' : "Impossible de charger l'utilisateur."),
       });
     }
   }

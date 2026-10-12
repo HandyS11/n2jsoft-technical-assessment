@@ -22,10 +22,7 @@ const pageSize = 20;
 const monthPattern = /^(20\d{2}|2100)-(0[1-9]|1[0-2])$/;
 
 const ruleMessages = new Map<string, string>([
-  [
-    'expense_report.inactive_user',
-    'Cet utilisateur est inactif : il ne peut pas être affecté à une note de frais.',
-  ],
+  ['expense_report.inactive_user', 'Cet utilisateur est inactif : il ne peut pas être affecté à une note de frais.'],
   ['expense_report.already_exists', 'Une note de frais existe déjà pour cet utilisateur et ce mois.'],
 ]);
 
@@ -127,12 +124,7 @@ function isUnavailableUser(error: unknown): boolean {
                   <td class="text-right tabular-nums">{{ report.expenseCount }}</td>
                   <td class="text-right whitespace-nowrap tabular-nums">{{ report.total | currency: 'EUR' }}</td>
                   <td class="text-right">
-                    <button
-                      type="button"
-                      class="btn-sm btn-danger"
-                      [disabled]="list.busy()"
-                      (click)="remove(report)"
-                    >
+                    <button type="button" class="btn-sm btn-danger" [disabled]="list.busy()" (click)="remove(report)">
                       Supprimer
                     </button>
                   </td>
@@ -177,10 +169,10 @@ export default class ExpenseReportListPage {
             catchError(() => {
               this.usersFailed.set(true);
               return EMPTY;
-            })
-          )
+            }),
+          ),
         ),
-        takeUntilDestroyed()
+        takeUntilDestroyed(),
       )
       .subscribe((users) => this.showUsers(users));
     this.userLoads.next();
@@ -204,20 +196,18 @@ export default class ExpenseReportListPage {
     const { userId, month } = this.form.getRawValue();
     this.creating.set(true);
     this.createError.set(null);
-    this.reportsApi
-      .create({ userId, year: Number(month.slice(0, 4)), month: Number(month.slice(5, 7)) })
-      .subscribe({
-        next: (report) => {
-          void this.router.navigate(['/expense-reports', report.id]);
-        },
-        error: (error: unknown) => {
-          this.creating.set(false);
-          this.createError.set(createErrorMessage(error));
-          if (isUnavailableUser(error)) {
-            this.userLoads.next();
-          }
-        },
-      });
+    this.reportsApi.create({ userId, year: Number(month.slice(0, 4)), month: Number(month.slice(5, 7)) }).subscribe({
+      next: (report) => {
+        void this.router.navigate(['/expense-reports', report.id]);
+      },
+      error: (error: unknown) => {
+        this.creating.set(false);
+        this.createError.set(createErrorMessage(error));
+        if (isUnavailableUser(error)) {
+          this.userLoads.next();
+        }
+      },
+    });
   }
 
   protected remove(report: ExpenseReportSummary): void {

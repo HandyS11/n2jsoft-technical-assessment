@@ -186,7 +186,7 @@ export default class ExpenseReportPage {
       .pipe(
         // Only the latest read counts: an answer arriving late must not replace the report read since.
         switchMap(() => this.api.get(this.id).pipe(catchError((error: unknown) => this.reportLoadFailed(error)))),
-        takeUntilDestroyed()
+        takeUntilDestroyed(),
       )
       .subscribe((report) => {
         this.report.set(report);
@@ -200,9 +200,9 @@ export default class ExpenseReportPage {
             ? of(undefined)
             : this.expensesApi
                 .get(this.id, expenseId)
-                .pipe(catchError((error: unknown) => this.expenseLoadFailed(error)))
+                .pipe(catchError((error: unknown) => this.expenseLoadFailed(error))),
         ),
-        takeUntilDestroyed()
+        takeUntilDestroyed(),
       )
       .subscribe((expense) => this.editing.set(expense));
     this.loadReport();
@@ -278,7 +278,9 @@ export default class ExpenseReportPage {
   }
 
   private reportLoadFailed(error: unknown): Observable<never> {
-    this.loadError.set(hasStatus(error, 404) ? 'Note de frais introuvable.' : 'Impossible de charger la note de frais.');
+    this.loadError.set(
+      hasStatus(error, 404) ? 'Note de frais introuvable.' : 'Impossible de charger la note de frais.',
+    );
     return EMPTY;
   }
 

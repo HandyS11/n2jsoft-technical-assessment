@@ -27,7 +27,7 @@ export class UsersApi {
       // Each slice starts after the last user read: users changing meanwhile cannot make it skip or repeat others.
       expand((slice) => (slice.next === null ? EMPTY : this.listActive(slice.next))),
       mergeMap((slice) => slice.items),
-      toArray()
+      toArray(),
     );
   }
 

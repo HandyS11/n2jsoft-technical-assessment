@@ -31,10 +31,7 @@ const ruleMessages = new Map<string, string>([
     "Le quota mensuel de dépenses de cet utilisateur est atteint : impossible d'ajouter cette dépense.",
   ],
   ['expense.date_outside_report_month', 'La date doit être comprise dans le mois de la note de frais.'],
-  [
-    'expense_report.deleted_user',
-    "L'utilisateur de cette note de frais a été supprimé : elle est en lecture seule.",
-  ],
+  ['expense_report.deleted_user', "L'utilisateur de cette note de frais a été supprimé : elle est en lecture seule."],
 ]);
 
 function twoDecimals(control: AbstractControl<number | null>): ValidationErrors | null {

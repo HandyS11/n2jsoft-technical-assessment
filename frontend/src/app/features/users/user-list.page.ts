@@ -67,12 +67,7 @@ type StatusFilter = keyof typeof statusFilters;
                       <button type="button" class="btn-sm" [disabled]="list.busy()" (click)="toggle(user)">
                         {{ user.isActive ? 'Désactiver' : 'Activer' }}
                       </button>
-                      <button
-                        type="button"
-                        class="btn-sm btn-danger"
-                        [disabled]="list.busy()"
-                        (click)="remove(user)"
-                      >
+                      <button type="button" class="btn-sm btn-danger" [disabled]="list.busy()" (click)="remove(user)">
                         Supprimer
                       </button>
                     </div>

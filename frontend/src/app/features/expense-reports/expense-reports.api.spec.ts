@@ -1,14 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { PagedResult } from '../../core/paged-result';
-import {
-  CreateExpenseReport,
-  ExpenseReportDetails,
-} from './expense-report-details';
+import { CreateExpenseReport, ExpenseReportDetails } from './expense-report-details';
 import { ExpenseReportSummary } from './expense-report-summary';
 import { ExpenseReportsApi } from './expense-reports.api';
 
@@ -59,9 +53,7 @@ describe('ExpenseReportsApi', () => {
 
     api.list(2, 20).subscribe((value) => (result = value));
 
-    const request = http.expectOne(
-      '/api/v1/expense-reports?page=2&pageSize=20',
-    );
+    const request = http.expectOne('/api/v1/expense-reports?page=2&pageSize=20');
     expect(request.request.method).toBe('GET');
     request.flush(reports);
     expect(result).toEqual(reports);
