@@ -14,8 +14,10 @@ const largestPageSize = 100;
 export class UsersApi {
   private readonly http = inject(HttpClient);
 
-  list(page: number, pageSize: number): Observable<PagedResult<UserSummary>> {
-    return this.http.get<PagedResult<UserSummary>>(usersUrl, { params: { page, pageSize } });
+  /** Every user when `isActive` is undefined, otherwise only the active or the inactive ones. */
+  list(page: number, pageSize: number, isActive?: boolean): Observable<PagedResult<UserSummary>> {
+    const params = isActive === undefined ? { page, pageSize } : { page, pageSize, isActive };
+    return this.http.get<PagedResult<UserSummary>>(usersUrl, { params });
   }
 
   /** Every active user, in the API's order (last name, then first name), read 100 at a time. */

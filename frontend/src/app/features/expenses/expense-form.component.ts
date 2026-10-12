@@ -56,57 +56,80 @@ type Field = 'date' | 'description' | 'amount' | 'storeName' | 'street' | 'posta
   selector: 'app-expense-form',
   imports: [ReactiveFormsModule],
   template: `
-    <form [formGroup]="form" (ngSubmit)="save()" novalidate class="flex max-w-md flex-col gap-2">
-      <h2 class="text-xl font-semibold">{{ expense() ? 'Modifier la dépense' : 'Nouvelle dépense' }}</h2>
+    <!-- Two rows on a wide screen: what was spent, then where. -->
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate class="grid gap-x-4 gap-y-5 md:grid-cols-6">
+      <h2 class="text-base font-semibold text-slate-900 md:col-span-6">
+        {{ expense() ? 'Modifier la dépense' : 'Nouvelle dépense' }}
+      </h2>
 
-      <label for="date">Date</label>
-      <input id="date" type="date" [min]="firstDay()" [max]="lastDay()" formControlName="date" />
-      @if (errorFor('date'); as message) {
-        <p class="field-error text-sm text-red-700">{{ message }}</p>
-      }
+      <div class="field md:col-span-2">
+        <label for="date">Date</label>
+        <input id="date" type="date" [min]="firstDay()" [max]="lastDay()" formControlName="date" />
+        @if (errorFor('date'); as message) {
+          <p class="field-error">{{ message }}</p>
+        }
+      </div>
 
-      <label for="description">Description</label>
-      <input id="description" formControlName="description" />
-      <p class="text-sm">{{ form.controls.description.value.trim().length }}/{{ descriptionMaxLength }}</p>
-      @if (errorFor('description'); as message) {
-        <p class="field-error text-sm text-red-700">{{ message }}</p>
-      }
+      <div class="field md:col-span-3">
+        <div class="flex items-baseline justify-between">
+          <label for="description">Description</label>
+          <p class="text-xs text-slate-500 tabular-nums">
+            {{ form.controls.description.value.trim().length }}/{{ descriptionMaxLength }}
+          </p>
+        </div>
+        <input id="description" formControlName="description" />
+        @if (errorFor('description'); as message) {
+          <p class="field-error">{{ message }}</p>
+        }
+      </div>
 
-      <label for="amount">Montant (€)</label>
-      <input id="amount" type="number" min="0.01" max="999999.99" step="0.01" formControlName="amount" />
-      @if (errorFor('amount'); as message) {
-        <p class="field-error text-sm text-red-700">{{ message }}</p>
-      }
+      <div class="field">
+        <label for="amount">Montant (€)</label>
+        <input id="amount" type="number" min="0.01" max="999999.99" step="0.01" formControlName="amount" />
+        @if (errorFor('amount'); as message) {
+          <p class="field-error">{{ message }}</p>
+        }
+      </div>
 
-      <label for="storeName">Enseigne (facultatif)</label>
-      <input id="storeName" formControlName="storeName" />
-      @if (errorFor('storeName'); as message) {
-        <p class="field-error text-sm text-red-700">{{ message }}</p>
-      }
+      <div class="field md:col-span-2">
+        <label for="storeName">Enseigne (facultatif)</label>
+        <input id="storeName" formControlName="storeName" />
+        @if (errorFor('storeName'); as message) {
+          <p class="field-error">{{ message }}</p>
+        }
+      </div>
 
-      <label for="street">Rue</label>
-      <input id="street" formControlName="street" />
-      @if (errorFor('street'); as message) {
-        <p class="field-error text-sm text-red-700">{{ message }}</p>
-      }
+      <div class="field md:col-span-2">
+        <label for="street">Rue</label>
+        <input id="street" formControlName="street" />
+        @if (errorFor('street'); as message) {
+          <p class="field-error">{{ message }}</p>
+        }
+      </div>
 
-      <label for="postalCode">Code postal</label>
-      <input id="postalCode" formControlName="postalCode" inputmode="numeric" />
-      @if (errorFor('postalCode'); as message) {
-        <p class="field-error text-sm text-red-700">{{ message }}</p>
-      }
+      <div class="field">
+        <label for="postalCode">Code postal</label>
+        <input id="postalCode" formControlName="postalCode" inputmode="numeric" />
+        @if (errorFor('postalCode'); as message) {
+          <p class="field-error">{{ message }}</p>
+        }
+      </div>
 
-      <label for="city">Ville</label>
-      <input id="city" formControlName="city" />
-      @if (errorFor('city'); as message) {
-        <p class="field-error text-sm text-red-700">{{ message }}</p>
-      }
+      <div class="field">
+        <label for="city">Ville</label>
+        <input id="city" formControlName="city" />
+        @if (errorFor('city'); as message) {
+          <p class="field-error">{{ message }}</p>
+        }
+      </div>
 
       @if (error(); as message) {
-        <p role="alert">{{ message }}</p>
+        <p role="alert" class="md:col-span-6">{{ message }}</p>
       }
-      <div class="mt-2 flex gap-4">
-        <button type="submit" [disabled]="saving()">{{ expense() ? 'Enregistrer' : 'Ajouter' }}</button>
+      <div class="flex gap-3 md:col-span-6">
+        <button type="submit" class="btn-primary" [disabled]="saving()">
+          {{ expense() ? 'Enregistrer' : 'Ajouter' }}
+        </button>
         @if (expense()) {
           <button type="button" (click)="cancelled.emit()">Annuler</button>
         }

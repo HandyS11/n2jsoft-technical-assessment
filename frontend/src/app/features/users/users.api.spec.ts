@@ -70,6 +70,14 @@ describe('UsersApi', () => {
     expect(result).toEqual(users);
   });
 
+  it('lists only the active or the inactive users when asked', () => {
+    api.list(1, 20, false).subscribe();
+
+    http
+      .expectOne('/api/v1/users?page=1&pageSize=20&isActive=false')
+      .flush({ items: [], page: 1, pageSize: 20, totalCount: 0 });
+  });
+
   it('gets a user with GET /api/v1/users/:id', () => {
     let result: UserDetails | undefined;
 

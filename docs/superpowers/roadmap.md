@@ -21,6 +21,7 @@ done, then brainstorms only what is new.
 | 3 | Expense Reports | Report entity, generated title "Prénom Nom - Mois Année", create from user + month (active users only), physical delete, reports list page       | 2          | Done        | [expense reports](specs/2026-10-11-expense-reports-design.md), [plan](plans/2026-10-11-expense-reports.md) |
 | 4 | Expenses        | Expense entity and validation, monthly quota rule, edit, soft delete, report page with add form and expenses in pages of 5                     | 3          | Done        | [expenses](specs/2026-10-11-expenses-design.md), [plan](plans/2026-10-11-expenses.md) |
 | 5 | Wrap-up         | OpenTelemetry for the webapi, shared pagination component, `prestart` removal, fresh-clone run, final "Mes Notes" with a traceability table; private GitHub repo + invite `n2jsoft-hr-cr` | 4 | Done | [wrap-up](specs/2026-10-11-wrap-up-design.md), [plan](plans/2026-10-11-wrap-up.md) |
+| 6 | UI polish       | Tailwind actually compiled (`.postcssrc.json`), shared control styles, status filter on the users page, link from a report to its user        | 5          | Done        | — (bounded change, designed in conversation)                  |
 
 ## Conventions every slice inherits
 

@@ -29,27 +29,41 @@ function expenseCount(count: number): string {
   selector: 'app-expense-report-page',
   imports: [CurrencyPipe, ExpenseFormComponent, PaginationComponent, RouterLink],
   template: `
-    <a routerLink="/expense-reports" class="underline">← Notes de frais</a>
+    <a routerLink="/expense-reports" class="link text-sm">← Notes de frais</a>
     @if (loadError(); as message) {
-      <p role="alert">{{ message }}</p>
+      <p role="alert" class="mt-4">{{ message }}</p>
     }
     @if (deleteError(); as message) {
-      <p role="alert">{{ message }}</p>
+      <p role="alert" class="mt-4">{{ message }}</p>
     }
     @if (report(); as report) {
-      <h1 class="my-4 text-2xl font-semibold">{{ report.title }}</h1>
-      <p>Mois : {{ monthLabel() }}</p>
-      <p>{{ countLabel() }}</p>
-      <p>Total : {{ report.total | currency: 'EUR' }}</p>
-      <button type="button" class="mt-4" [disabled]="deleting()" (click)="remove(report)">
-        Supprimer la note de frais
-      </button>
+      <div class="mt-2 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-semibold text-slate-900">{{ report.title }}</h1>
+          @if (!report.isReadOnly) {
+            <a [routerLink]="['/users', report.userId, 'edit']" class="link text-sm">Voir l'utilisateur</a>
+          }
+        </div>
+        <button type="button" class="btn-danger" [disabled]="deleting()" (click)="remove(report)">
+          Supprimer la note de frais
+        </button>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-2 text-sm">
+        <p class="rounded-md border border-slate-200 bg-white px-3 py-1.5">Mois : {{ monthLabel() }}</p>
+        <p class="rounded-md border border-slate-200 bg-white px-3 py-1.5">{{ countLabel() }}</p>
+        <p class="rounded-md border border-slate-200 bg-white px-3 py-1.5 font-medium">
+          Total : {{ report.total | currency: 'EUR' }}
+        </p>
+      </div>
 
       <section class="my-8">
         @if (report.isReadOnly) {
-          <p>L'utilisateur de cette note de frais a été supprimé : elle est en lecture seule.</p>
+          <p class="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            L'utilisateur de cette note de frais a été supprimé : elle est en lecture seule.
+          </p>
         } @else {
           <app-expense-form
+            class="card block p-6"
             [reportId]="report.id"
             [year]="report.year"
             [month]="report.month"
@@ -61,61 +75,72 @@ function expenseCount(count: number): string {
           />
         }
         @if (notice(); as message) {
-          <p role="status" class="mt-2">{{ message }}</p>
+          <p role="status" class="mt-4">{{ message }}</p>
         }
       </section>
 
       <section>
-        <h2 class="mb-2 text-xl font-semibold">Dépenses</h2>
+        <h2 class="mb-3 text-lg font-semibold text-slate-900">Dépenses</h2>
         @if (expenses.failed()) {
-          <p role="alert">Impossible de charger les dépenses.</p>
+          <p role="alert" class="mb-4">Impossible de charger les dépenses.</p>
         }
         @if (expenses.actionFailed()) {
-          <p role="alert">L'opération a échoué. Veuillez réessayer.</p>
+          <p role="alert" class="mb-4">L'opération a échoué. Veuillez réessayer.</p>
         }
         @if (expenses.page(); as page) {
           @if (page.items.length > 0) {
-            <table class="w-full text-left">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Description</th>
-                  <th>Montant</th>
-                  <th>Adresse de facturation</th>
-                  @if (!report.isReadOnly) {
-                    <th>Actions</th>
-                  }
-                </tr>
-              </thead>
-              <tbody>
-                @for (expense of page.items; track expense.id) {
+            <div class="card overflow-x-auto">
+              <table>
+                <thead>
                   <tr>
-                    <td>{{ dateLabel(expense) }}</td>
-                    <td>{{ expense.description }}</td>
-                    <td>{{ expense.amount | currency: 'EUR' }}</td>
-                    <td>{{ addressLabel(expense) }}</td>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th class="text-right">Montant</th>
+                    <th>Adresse de facturation</th>
                     @if (!report.isReadOnly) {
-                      <td class="flex gap-2">
-                        <button type="button" [disabled]="expenses.busy()" (click)="edit(expense)">Modifier</button>
-                        <button type="button" [disabled]="expenses.busy()" (click)="removeExpense(expense)">
-                          Supprimer
-                        </button>
-                      </td>
+                      <th class="text-right">Actions</th>
                     }
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (expense of page.items; track expense.id) {
+                    <tr [class.bg-indigo-50]="editing()?.id === expense.id">
+                      <td class="whitespace-nowrap">{{ dateLabel(expense) }}</td>
+                      <td class="font-medium text-slate-900">{{ expense.description }}</td>
+                      <td class="text-right whitespace-nowrap tabular-nums">{{ expense.amount | currency: 'EUR' }}</td>
+                      <td class="text-slate-600">{{ addressLabel(expense) }}</td>
+                      @if (!report.isReadOnly) {
+                        <td>
+                          <div class="flex justify-end gap-2">
+                            <button type="button" class="btn-sm" [disabled]="expenses.busy()" (click)="edit(expense)">
+                              Modifier
+                            </button>
+                            <button
+                              type="button"
+                              class="btn-sm btn-danger"
+                              [disabled]="expenses.busy()"
+                              (click)="removeExpense(expense)"
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
             <app-pagination [list]="expenses" />
           } @else {
-            <p>Aucune dépense.</p>
+            <p class="card muted p-8 text-center">Aucune dépense.</p>
           }
         } @else if (!expenses.failed()) {
-          <p>Chargement…</p>
+          <p class="muted">Chargement…</p>
         }
       </section>
     } @else if (!loadError()) {
-      <p>Chargement…</p>
+      <p class="muted mt-4">Chargement…</p>
     }
   `,
 })
