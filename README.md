@@ -32,6 +32,10 @@ repartir des données de démonstration, supprimer ce volume (`docker volume ls`
 
 La console dotnet affiche le lien vers le dashboard Aspire pour consulter les services applicatifs.
 
+Sans certificat de développement HTTPS approuvé (le cas habituel sous Linux), le dashboard affiche « Lost connection
+to the AppHost » : lancer alors en http, comme indiqué dans « Certificat de développement » (tranche 5 de « Mes
+Notes »).
+
 ### Critères d'évaluation
 
 Nous fournissons ci-dessous les besoins fonctionnels à développer, ainsi que leurs critères d'acceptation.
