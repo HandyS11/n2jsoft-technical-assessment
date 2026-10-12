@@ -156,6 +156,24 @@ describe('ExpenseReportPage', () => {
       expect(back?.getAttribute('href')).toBe('/expense-reports');
     });
 
+    it('links to the user of the report', async () => {
+      const page = await render();
+
+      const link = Array.from(page.element().querySelectorAll('a')).find(
+        (candidate) => candidate.textContent?.trim() === "Voir l'utilisateur"
+      );
+      expect(link?.getAttribute('href')).toBe('/users/u1/edit');
+    });
+
+    it('does not link to the user once deleted', async () => {
+      const api = fakeApi();
+      api.get.mockImplementation(() => of({ ...october, isReadOnly: true }));
+
+      const page = await render(api);
+
+      expect(page.element().textContent).not.toContain("Voir l'utilisateur");
+    });
+
     it('says so when the report does not exist', async () => {
       const api = fakeApi();
       api.get.mockImplementation(() => httpError(404));

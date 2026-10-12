@@ -9,13 +9,19 @@ export type Pager = Pick<PagedList<unknown>, 'page' | 'busy' | 'pageCount' | 'lo
   selector: 'app-pagination',
   template: `
     @if (list().page(); as page) {
-      <nav aria-label="Pagination" class="mt-4 flex items-center gap-4">
-        <button type="button" [disabled]="list().busy() || page.page <= 1" (click)="list().load(page.page - 1)">
-          Précédent
-        </button>
-        <span>Page {{ page.page }} sur {{ list().pageCount() }}</span>
+      <nav aria-label="Pagination" class="mt-4 flex items-center justify-end gap-3">
         <button
           type="button"
+          class="btn-sm"
+          [disabled]="list().busy() || page.page <= 1"
+          (click)="list().load(page.page - 1)"
+        >
+          Précédent
+        </button>
+        <span class="muted">Page {{ page.page }} sur {{ list().pageCount() }}</span>
+        <button
+          type="button"
+          class="btn-sm"
           [disabled]="list().busy() || page.page >= list().pageCount()"
           (click)="list().load(page.page + 1)"
         >

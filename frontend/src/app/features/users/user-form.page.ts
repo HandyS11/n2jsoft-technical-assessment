@@ -65,55 +65,73 @@ function saveErrorMessage(error: unknown): string {
   selector: 'app-user-form-page',
   imports: [ReactiveFormsModule, RouterLink],
   template: `
-    <h1 class="mb-4 text-2xl font-semibold">{{ title }}</h1>
+    <a routerLink="/users" class="link text-sm">← Utilisateurs</a>
+    <h1 class="mt-2 mb-6 text-2xl font-semibold text-slate-900">{{ title }}</h1>
     @if (error(); as message) {
-      <p role="alert">{{ message }}</p>
+      <p role="alert" class="mb-4 max-w-2xl">{{ message }}</p>
     }
     @if (loaded()) {
-      <form [formGroup]="form" (ngSubmit)="save()" novalidate class="flex max-w-md flex-col gap-2">
-        <label for="firstName">Prénom</label>
-        <input id="firstName" formControlName="firstName" />
-        @if (errorFor('firstName'); as message) {
-          <p class="field-error text-sm text-red-700">{{ message }}</p>
-        }
+      <form
+        [formGroup]="form"
+        (ngSubmit)="save()"
+        novalidate
+        class="card grid max-w-2xl gap-x-4 gap-y-5 p-6 sm:grid-cols-2"
+      >
+        <div class="field">
+          <label for="firstName">Prénom</label>
+          <input id="firstName" formControlName="firstName" />
+          @if (errorFor('firstName'); as message) {
+            <p class="field-error">{{ message }}</p>
+          }
+        </div>
 
-        <label for="lastName">Nom</label>
-        <input id="lastName" formControlName="lastName" />
-        @if (errorFor('lastName'); as message) {
-          <p class="field-error text-sm text-red-700">{{ message }}</p>
-        }
+        <div class="field">
+          <label for="lastName">Nom</label>
+          <input id="lastName" formControlName="lastName" />
+          @if (errorFor('lastName'); as message) {
+            <p class="field-error">{{ message }}</p>
+          }
+        </div>
 
-        <label for="street">Rue</label>
-        <input id="street" formControlName="street" />
-        @if (errorFor('street'); as message) {
-          <p class="field-error text-sm text-red-700">{{ message }}</p>
-        }
+        <div class="field sm:col-span-2">
+          <label for="street">Rue</label>
+          <input id="street" formControlName="street" />
+          @if (errorFor('street'); as message) {
+            <p class="field-error">{{ message }}</p>
+          }
+        </div>
 
-        <label for="postalCode">Code postal</label>
-        <input id="postalCode" formControlName="postalCode" inputmode="numeric" />
-        @if (errorFor('postalCode'); as message) {
-          <p class="field-error text-sm text-red-700">{{ message }}</p>
-        }
+        <div class="field">
+          <label for="postalCode">Code postal</label>
+          <input id="postalCode" formControlName="postalCode" inputmode="numeric" />
+          @if (errorFor('postalCode'); as message) {
+            <p class="field-error">{{ message }}</p>
+          }
+        </div>
 
-        <label for="city">Ville</label>
-        <input id="city" formControlName="city" />
-        @if (errorFor('city'); as message) {
-          <p class="field-error text-sm text-red-700">{{ message }}</p>
-        }
+        <div class="field">
+          <label for="city">Ville</label>
+          <input id="city" formControlName="city" />
+          @if (errorFor('city'); as message) {
+            <p class="field-error">{{ message }}</p>
+          }
+        </div>
 
-        <label for="monthlyExpenseQuota">Quota mensuel de dépenses</label>
-        <input id="monthlyExpenseQuota" type="number" min="1" step="1" formControlName="monthlyExpenseQuota" />
-        @if (errorFor('monthlyExpenseQuota'); as message) {
-          <p class="field-error text-sm text-red-700">{{ message }}</p>
-        }
+        <div class="field">
+          <label for="monthlyExpenseQuota">Quota mensuel de dépenses</label>
+          <input id="monthlyExpenseQuota" type="number" min="1" step="1" formControlName="monthlyExpenseQuota" />
+          @if (errorFor('monthlyExpenseQuota'); as message) {
+            <p class="field-error">{{ message }}</p>
+          }
+        </div>
 
-        <div class="mt-2 flex gap-4">
-          <button type="submit" [disabled]="saving()">Enregistrer</button>
-          <a routerLink="/users" class="underline">Annuler</a>
+        <div class="flex gap-3 border-t border-slate-100 pt-5 sm:col-span-2">
+          <button type="submit" class="btn-primary" [disabled]="saving()">Enregistrer</button>
+          <a routerLink="/users" class="btn">Annuler</a>
         </div>
       </form>
     } @else if (!error()) {
-      <p>Chargement…</p>
+      <p class="muted">Chargement…</p>
     }
   `,
 })

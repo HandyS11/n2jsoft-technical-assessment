@@ -287,12 +287,28 @@ Réalisé :
 - **Démarrage** : le script `prestart: npm install` du front est supprimé, Aspire installe déjà les dépendances
   avant de lancer l'application.
 - **Premier lancement vérifié** depuis un clone neuf (sans `node_modules`, `bin` ni `obj`) :
-  `dotnet run --project tools/N2JSoft.Aspire` démarre la base, l'API et le front, avec les utilisateurs de
-  démonstration (Juste Leblanc, Marc Assin).
+  `dotnet run --project tools/N2JSoft.Aspire` démarre la base, l'API et le front, avec les données de démonstration.
 - **Certificat de développement** : sans certificat approuvé, le dashboard ne joint pas l'AppHost (« Lost connection
   to the AppHost ») et ne reçoit pas la télémétrie, qui passe en https. L'approuver avec
   `dotnet dev-certs https --trust` (Windows, macOS). Sous Linux, où l'approbation dépend de la distribution, lancer en
   http : `ASPIRE_ALLOW_UNSECURED_TRANSPORT=true dotnet run --project tools/N2JSoft.Aspire --launch-profile http`.
+
+### Tranche 6 — Interface
+
+Le sujet n'évalue pas le design ; cette tranche rend seulement l'interface lisible et confortable, sans bibliothèque de
+composants.
+
+Réalisé :
+
+- **Tailwind compilé** : le builder Angular (`@angular/build:application`) ne lit que `postcss.config.json` ou
+  `.postcssrc.json`. Le `postcss.config.js` initial était ignoré : aucune classe Tailwind ne s'appliquait. Il est
+  remplacé par `.postcssrc.json` ; `autoprefixer` est retiré, Tailwind v4 et Angular préfixent déjà le CSS.
+- **Styles communs** dans `styles.css` : champs, boutons (principal, secondaire, suppression), tableaux, alertes et
+  pastilles de statut. Les pages posent leurs listes et formulaires dans des cartes, alignent les montants à droite et
+  regroupent les champs d'adresse sur une ligne.
+- **Deux possibilités de l'API enfin utilisées** : la page des utilisateurs filtre par statut (`GET /v1/users?isActive=`,
+  que le front n'appelait plus depuis la lecture des utilisateurs actifs par curseur), et la page d'une note de frais
+  mène à son utilisateur (`userId` du détail), sauf s'il a été supprimé.
 
 ### Lancer les tests
 

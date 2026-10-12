@@ -1,3 +1,111 @@
-/* You can add global styles to this file, and also import other style files */
-
 @import "tailwindcss";
+
+/* Tailwind's reset strips every control of its look: these give them back one, shared by every page. */
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased;
+  }
+
+  label {
+    @apply text-sm font-medium text-slate-700;
+  }
+
+  input,
+  select {
+    @apply rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-xs;
+    @apply focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none;
+  }
+
+  /* Angular's classes: the field was left with a value the form refuses. */
+  input.ng-invalid.ng-touched,
+  select.ng-invalid.ng-touched {
+    @apply border-red-400;
+  }
+
+  button {
+    @apply cursor-pointer;
+  }
+
+  button:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  table {
+    @apply w-full text-left text-sm;
+  }
+
+  th {
+    @apply bg-slate-50 px-4 py-2.5 text-xs font-semibold tracking-wide text-slate-500 uppercase;
+  }
+
+  td {
+    @apply border-t border-slate-100 px-4 py-3 align-middle;
+  }
+
+  tbody tr:hover {
+    @apply bg-slate-50/60;
+  }
+
+  [role="alert"] {
+    @apply rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800;
+  }
+
+  [role="status"] {
+    @apply rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800;
+  }
+}
+
+@layer components {
+  /* A plain <button> gets .btn's look without the class; an <a> styled as a button needs it. */
+  .btn,
+  button {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-slate-300 bg-white px-3.5 py-2;
+    @apply text-sm font-medium whitespace-nowrap text-slate-700 shadow-xs;
+    @apply hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:outline-none;
+  }
+
+  .btn-primary {
+    @apply border-indigo-600 bg-indigo-600 text-white hover:bg-indigo-500;
+  }
+
+  .btn-danger {
+    @apply border-red-200 text-red-700 hover:bg-red-50;
+  }
+
+  .btn-sm {
+    @apply px-2.5 py-1 text-xs;
+  }
+
+  .nav-link {
+    @apply rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900;
+  }
+
+  .nav-link.active {
+    @apply bg-slate-100 text-slate-900;
+  }
+
+  .link {
+    @apply font-medium text-indigo-600 hover:text-indigo-500 hover:underline;
+  }
+
+  .card {
+    @apply rounded-lg border border-slate-200 bg-white shadow-sm;
+  }
+
+  /* A label, its control and its error, stacked: the control takes the field's width. */
+  .field {
+    @apply flex flex-col gap-1.5;
+  }
+
+  .field-error {
+    @apply text-sm text-red-700;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset;
+  }
+
+  .muted {
+    @apply text-sm text-slate-500;
+  }
+}

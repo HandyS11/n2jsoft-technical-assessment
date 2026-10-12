@@ -76,6 +76,12 @@ function render(api: ReturnType<typeof fakeApi>) {
       button(label, rowIndex).click();
       fixture.detectChanges();
     },
+    filter: (status: string) => {
+      const select = element.querySelector('#status') as HTMLSelectElement;
+      select.value = status;
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    },
   };
 }
 
@@ -91,12 +97,47 @@ describe('UserListPage', () => {
     ]);
   });
 
-  it('asks the API for the first page of 20 users', () => {
+  it('asks the API for the first page of 20 users, whatever their status', () => {
     const api = fakeApi(() => of(pageOf([juste])));
 
     render(api);
 
-    expect(api.list).toHaveBeenCalledWith(1, 20);
+    expect(api.list).toHaveBeenCalledWith(1, 20, undefined);
+  });
+
+  it('lists only the active or the inactive users once filtered', () => {
+    const api = fakeApi(() => of(pageOf([juste])));
+    const page = render(api);
+
+    page.filter('active');
+    expect(api.list).toHaveBeenLastCalledWith(1, 20, true);
+
+    page.filter('inactive');
+    expect(api.list).toHaveBeenLastCalledWith(1, 20, false);
+
+    page.filter('all');
+    expect(api.list).toHaveBeenLastCalledWith(1, 20, undefined);
+  });
+
+  it('starts again from the first page when the filter changes', () => {
+    const api = fakeApi((page) => of(pageOf([juste], page, 45)));
+    const page = render(api);
+    page.click('Suivant');
+
+    page.filter('inactive');
+
+    expect(api.list).toHaveBeenLastCalledWith(1, 20, false);
+    expect(page.element.textContent).toContain('Page 1 sur 3');
+  });
+
+  it('keeps the filter when the page reloads after an action', () => {
+    const api = fakeApi(() => of(pageOf([juste])));
+    const page = render(api);
+    page.filter('active');
+
+    page.click('Désactiver', 0);
+
+    expect(api.list).toHaveBeenLastCalledWith(1, 20, true);
   });
 
   it('says so when there is no user', () => {
@@ -134,7 +175,7 @@ describe('UserListPage', () => {
 
     page.click('Suivant');
 
-    expect(api.list).toHaveBeenLastCalledWith(2, 20);
+    expect(api.list).toHaveBeenLastCalledWith(2, 20, undefined);
     expect(page.rows()).toEqual([['Marc Assin', 'Lyon', '5', 'Inactif']]);
     expect(page.element.textContent).toContain('Page 2 sur 3');
   });
@@ -301,7 +342,7 @@ describe('UserListPage', () => {
     page.click('Désactiver', 0);
 
     expect(api.list).toHaveBeenCalledTimes(2);
-    expect(api.list).toHaveBeenLastCalledWith(1, 20);
+    expect(api.list).toHaveBeenLastCalledWith(1, 20, undefined);
     expect(
       page.element.querySelector('[role="alert"]')?.textContent?.trim()
     ).toBe("L'opération a échoué. Veuillez réessayer.");

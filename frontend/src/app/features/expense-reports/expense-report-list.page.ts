@@ -61,85 +61,97 @@ function isUnavailableUser(error: unknown): boolean {
   selector: 'app-expense-report-list-page',
   imports: [CurrencyPipe, PaginationComponent, ReactiveFormsModule, RouterLink],
   template: `
-    <h1 class="mb-4 text-2xl font-semibold">Notes de frais</h1>
+    <h1 class="mb-6 text-2xl font-semibold text-slate-900">Notes de frais</h1>
 
-    <section class="mb-8">
-      <h2 class="mb-2 text-xl font-semibold">Nouvelle note de frais</h2>
+    <section class="card mb-8 p-6">
+      <h2 class="mb-4 text-base font-semibold text-slate-900">Nouvelle note de frais</h2>
       @if (usersFailed()) {
         <p role="alert">Impossible de charger les utilisateurs.</p>
       } @else if (activeUsers(); as users) {
         @if (users.length > 0) {
-          <form [formGroup]="form" (ngSubmit)="create()" novalidate class="flex max-w-md flex-col gap-2">
-            <label for="userId">Utilisateur</label>
-            <select id="userId" formControlName="userId">
-              <option value="" disabled>Choisissez un utilisateur</option>
-              @for (user of users; track user.id) {
-                <option [value]="user.id">{{ user.name }}</option>
+          <form [formGroup]="form" (ngSubmit)="create()" novalidate class="flex flex-wrap items-start gap-4">
+            <div class="field w-full sm:w-72">
+              <label for="userId">Utilisateur</label>
+              <select id="userId" formControlName="userId">
+                <option value="" disabled>Choisissez un utilisateur</option>
+                @for (user of users; track user.id) {
+                  <option [value]="user.id">{{ user.name }}</option>
+                }
+              </select>
+              @if (errorFor('userId'); as message) {
+                <p class="field-error">{{ message }}</p>
               }
-            </select>
-            @if (errorFor('userId'); as message) {
-              <p class="field-error text-sm text-red-700">{{ message }}</p>
-            }
+            </div>
 
-            <label for="month">Mois</label>
-            <input id="month" type="month" min="2000-01" max="2100-12" formControlName="month" />
-            @if (errorFor('month'); as message) {
-              <p class="field-error text-sm text-red-700">{{ message }}</p>
-            }
+            <div class="field w-full sm:w-48">
+              <label for="month">Mois</label>
+              <input id="month" type="month" min="2000-01" max="2100-12" formControlName="month" />
+              @if (errorFor('month'); as message) {
+                <p class="field-error">{{ message }}</p>
+              }
+            </div>
+
+            <button type="submit" class="btn-primary sm:mt-6.5" [disabled]="creating()">Créer</button>
 
             @if (createError(); as message) {
-              <p role="alert">{{ message }}</p>
+              <p role="alert" class="w-full">{{ message }}</p>
             }
-            <div class="mt-2">
-              <button type="submit" [disabled]="creating()">Créer</button>
-            </div>
           </form>
         } @else {
-          <p>Aucun utilisateur actif.</p>
+          <p class="muted">Aucun utilisateur actif.</p>
         }
       } @else {
-        <p>Chargement…</p>
+        <p class="muted">Chargement…</p>
       }
     </section>
 
     @if (list.failed()) {
-      <p role="alert">Impossible de charger les notes de frais.</p>
+      <p role="alert" class="mb-4">Impossible de charger les notes de frais.</p>
     }
     @if (list.actionFailed()) {
-      <p role="alert">L'opération a échoué. Veuillez réessayer.</p>
+      <p role="alert" class="mb-4">L'opération a échoué. Veuillez réessayer.</p>
     }
     @if (list.page(); as page) {
       @if (page.items.length > 0) {
-        <table class="w-full text-left">
-          <thead>
-            <tr>
-              <th>Intitulé</th>
-              <th>Dépenses</th>
-              <th>Total</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (report of page.items; track report.id) {
+        <div class="card overflow-x-auto">
+          <table>
+            <thead>
               <tr>
-                <td>
-                  <a [routerLink]="['/expense-reports', report.id]" class="underline">{{ report.title }}</a>
-                </td>
-                <td>{{ report.expenseCount }}</td>
-                <td>{{ report.total | currency: 'EUR' }}</td>
-                <td>
-                  <button type="button" [disabled]="list.busy()" (click)="remove(report)">Supprimer</button>
-                </td>
+                <th>Intitulé</th>
+                <th class="text-right">Dépenses</th>
+                <th class="text-right">Total</th>
+                <th class="text-right">Actions</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (report of page.items; track report.id) {
+                <tr>
+                  <td>
+                    <a [routerLink]="['/expense-reports', report.id]" class="link">{{ report.title }}</a>
+                  </td>
+                  <td class="text-right tabular-nums">{{ report.expenseCount }}</td>
+                  <td class="text-right whitespace-nowrap tabular-nums">{{ report.total | currency: 'EUR' }}</td>
+                  <td class="text-right">
+                    <button
+                      type="button"
+                      class="btn-sm btn-danger"
+                      [disabled]="list.busy()"
+                      (click)="remove(report)"
+                    >
+                      Supprimer
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
         <app-pagination [list]="list" />
       } @else {
-        <p>Aucune note de frais.</p>
+        <p class="card muted p-8 text-center">Aucune note de frais.</p>
       }
     } @else if (!list.failed()) {
-      <p>Chargement…</p>
+      <p class="muted">Chargement…</p>
     }
   `,
 })
