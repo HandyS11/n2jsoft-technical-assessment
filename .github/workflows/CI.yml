@@ -144,5 +144,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check formatting (Prettier)
+        run: npx prettier --check .
+
       - name: Lint, test & build
         run: npx nx run-many -t lint test build
