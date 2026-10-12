@@ -58,7 +58,7 @@ function fakeExpensesApi() {
     list: vi.fn((_reportId: string, page: number): Observable<PagedResult<ExpenseSummary>> =>
       of(expensePage([taxi], page))
     ),
-    get: vi.fn((): Observable<ExpenseDetails> => of(taxiDetails)),
+    get: vi.fn<(reportId: string, id: string) => Observable<ExpenseDetails>>(() => of(taxiDetails)),
     create: vi.fn((): Observable<ExpenseDetails> => of(taxiDetails)),
     update: vi.fn((): Observable<void> => of(undefined)),
     delete: vi.fn((): Observable<void> => of(undefined)),

@@ -42,7 +42,14 @@ describe('ExpenseReportsApi', () => {
   it('lists a page of reports with GET /api/v1/expense-reports', () => {
     const reports: PagedResult<ExpenseReportSummary> = {
       items: [
-        { id, title: 'Juste Leblanc - Octobre 2025', year: 2025, month: 10 },
+        {
+          id,
+          title: 'Juste Leblanc - Octobre 2025',
+          year: 2025,
+          month: 10,
+          expenseCount: 3,
+          total: 1234.5,
+        },
       ],
       page: 2,
       pageSize: 20,

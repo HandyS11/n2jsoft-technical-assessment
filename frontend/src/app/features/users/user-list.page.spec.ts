@@ -34,9 +34,9 @@ function fakeApi(
 ) {
   return {
     list: vi.fn(list),
-    activate: vi.fn(() => of(undefined)),
-    deactivate: vi.fn(() => of(undefined)),
-    delete: vi.fn(() => of(undefined)),
+    activate: vi.fn((): Observable<void> => of(undefined)),
+    deactivate: vi.fn((): Observable<void> => of(undefined)),
+    delete: vi.fn((): Observable<void> => of(undefined)),
   };
 }
 
