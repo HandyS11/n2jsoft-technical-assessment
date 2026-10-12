@@ -16,6 +16,12 @@ tab_width = 4
 indent_size = 2
 trim_trailing_whitespace = true
 
+# Frontend (Angular): 2-space indentation, as Angular and Prettier format it
+[*.{ts,mts,js,mjs,cjs,html,css}]
+
+indent_size = 2
+trim_trailing_whitespace = true
+
 #### .NET Coding Conventions ####
 [*.cs]
 
