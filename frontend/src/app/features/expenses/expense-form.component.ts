@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import {
   AbstractControl,
@@ -10,7 +9,7 @@ import {
 } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { cityMaxLength, postalCodePattern, streetMaxLength } from '../../core/address-rules';
-import { businessRuleCode } from '../../core/problem-details';
+import { businessRuleCode, hasStatus } from '../../core/problem-details';
 import { maxTrimmedLength, requiredText } from '../../core/text-validators';
 import { ExpenseDetails, SaveExpense } from './expense';
 import { ExpensesApi } from './expenses.api';
@@ -40,10 +39,6 @@ const ruleMessages = new Map<string, string>([
 
 function twoDecimals(control: AbstractControl<number | null>): ValidationErrors | null {
   return control.value === null || amountPattern.test(String(control.value)) ? null : { decimals: true };
-}
-
-function hasStatus(error: unknown, ...statuses: number[]): boolean {
-  return error instanceof HttpErrorResponse && statuses.includes(error.status);
 }
 
 type Field = 'date' | 'description' | 'amount' | 'storeName' | 'street' | 'postalCode' | 'city';

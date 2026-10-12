@@ -1,5 +1,4 @@
 import { CurrencyPipe } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -7,7 +6,7 @@ import { Router, RouterLink } from '@angular/router';
 import { catchError, EMPTY, Subject, switchMap } from 'rxjs';
 import { pagedList } from '../../core/paged-list';
 import { PaginationComponent } from '../../core/pagination.component';
-import { businessRuleCode } from '../../core/problem-details';
+import { businessRuleCode, hasStatus } from '../../core/problem-details';
 import { UserSummary } from '../users/user-summary';
 import { UsersApi } from '../users/users.api';
 import { confirmDeletion } from './confirm-deletion';
@@ -36,16 +35,12 @@ function currentMonth(): string {
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function isNotFound(error: unknown): boolean {
-  return error instanceof HttpErrorResponse && error.status === 404;
-}
-
 function createErrorMessage(error: unknown): string {
   const ruleMessage = ruleMessages.get(businessRuleCode(error) ?? '');
   if (ruleMessage !== undefined) {
     return ruleMessage;
   }
-  if (isNotFound(error)) {
+  if (hasStatus(error, 404)) {
     // The user was deleted since the active users were loaded.
     return 'Utilisateur introuvable.';
   }
@@ -54,7 +49,7 @@ function createErrorMessage(error: unknown): string {
 
 /** The chosen user can no longer get a report (deleted or deactivated since the active users were loaded). */
 function isUnavailableUser(error: unknown): boolean {
-  return isNotFound(error) || businessRuleCode(error) === 'expense_report.inactive_user';
+  return hasStatus(error, 404) || businessRuleCode(error) === 'expense_report.inactive_user';
 }
 
 @Component({
