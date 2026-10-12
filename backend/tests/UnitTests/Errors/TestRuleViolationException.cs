@@ -2,6 +2,6 @@ using Domain.Exceptions;
 
 namespace UnitTests.Errors;
 
-/// <summary>Nothing throws a business rule violation before slice 2: this stands in for the concrete rules.</summary>
+/// <summary>A rule no feature has: the error handling tests stay independent of the concrete business rules.</summary>
 public sealed class TestRuleViolationException()
     : BusinessRuleViolationException("test.rule", "The test rule was violated.");

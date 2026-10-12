@@ -220,8 +220,8 @@ Hypothèses (le sujet ne précise pas) :
 
 - Le quota mensuel est un entier supérieur ou égal à 1, sans plafond. Il reste modifiable ; le baisser sous le
   nombre de dépenses déjà saisies dans le mois ne touche pas l'existant et ne bloque que les nouvelles dépenses.
-- Longueurs maximales : 100 caractères pour le nom et le prénom, 200 pour la rue, 100 pour la ville. Elles sont
-  comptées avant le retrait des espaces en début et en fin, qui est ensuite appliqué.
+- Longueurs maximales : 100 caractères pour le nom et le prénom, 200 pour la rue, 100 pour la ville. Les espaces en
+  début et en fin sont retirés avant de compter la longueur, et ne sont pas enregistrés.
 - Un utilisateur inactif reste visible et modifiable ; seul son rattachement à une nouvelle note de frais sera
   refusé (tranche 3).
 - Un utilisateur supprimé ne peut pas être restauré.
