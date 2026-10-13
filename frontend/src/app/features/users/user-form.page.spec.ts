@@ -30,9 +30,7 @@ function httpError(status: number, error?: unknown): Observable<never> {
 function fakeApi() {
   return {
     get: vi.fn((): Observable<UserDetails> => of(juste)),
-    create: vi.fn(
-      (): Observable<UserDetails> => of({ ...jeanne, id: '2', isActive: true, version: 1 })
-    ),
+    create: vi.fn((): Observable<UserDetails> => of({ ...jeanne, id: '2', isActive: true, version: 1 })),
     update: vi.fn((): Observable<void> => of(undefined)),
   };
 }
@@ -54,7 +52,7 @@ async function render(api: ReturnType<typeof fakeApi>, url: string) {
   const element = () => harness.routeNativeElement as HTMLElement;
   const input = (label: string) => {
     const forId = Array.from(element().querySelectorAll('label')).find(
-      (candidate) => candidate.textContent?.trim() === label
+      (candidate) => candidate.textContent?.trim() === label,
     )?.htmlFor;
     return element().querySelector<HTMLInputElement>(`#${forId}`) as HTMLInputElement;
   };
@@ -73,10 +71,7 @@ async function render(api: ReturnType<typeof fakeApi>, url: string) {
       harness.detectChanges();
       await harness.fixture.whenStable();
     },
-    errors: () =>
-      Array.from(element().querySelectorAll('.field-error')).map((error) =>
-        error.textContent?.trim()
-      ),
+    errors: () => Array.from(element().querySelectorAll('.field-error')).map((error) => error.textContent?.trim()),
     alert: () => element().querySelector('[role="alert"]')?.textContent?.trim(),
   };
 }
@@ -94,9 +89,7 @@ describe('UserFormPage', () => {
   it('opens an empty creation form', async () => {
     const page = await render(fakeApi(), '/users/new');
 
-    expect(page.element().querySelector('h1')?.textContent?.trim()).toBe(
-      'Nouvel utilisateur'
-    );
+    expect(page.element().querySelector('h1')?.textContent?.trim()).toBe('Nouvel utilisateur');
     expect(page.input('Prénom').value).toBe('');
     expect(page.input('Quota mensuel de dépenses').value).toBe('');
   });
@@ -158,9 +151,7 @@ describe('UserFormPage', () => {
 
     await page.submit();
 
-    expect(page.errors()).toEqual([
-      'Le quota doit être un nombre entier supérieur ou égal à 1.',
-    ]);
+    expect(page.errors()).toEqual(['Le quota doit être un nombre entier supérieur ou égal à 1.']);
   });
 
   it('limits a name to 100 characters', async () => {
@@ -193,17 +184,14 @@ describe('UserFormPage', () => {
           'Address.Street': ['The field Street must be a string with a maximum length of 150.'],
           city: ['The value must not be blank.'],
         },
-      })
+      }),
     );
     const page = await render(api, '/users/new');
     fillJeanne(page);
 
     await page.submit();
 
-    expect(page.errors()).toEqual([
-      'Valeur refusée par le serveur.',
-      'Valeur refusée par le serveur.',
-    ]);
+    expect(page.errors()).toEqual(['Valeur refusée par le serveur.', 'Valeur refusée par le serveur.']);
     page.fill('Rue', '6 rue Victor Hugo');
     expect(page.errors()).toEqual(['Valeur refusée par le serveur.']);
   });
@@ -211,9 +199,7 @@ describe('UserFormPage', () => {
   it('loads the user to edit into the form', async () => {
     const page = await render(fakeApi(), '/users/1/edit');
 
-    expect(page.element().querySelector('h1')?.textContent?.trim()).toBe(
-      "Modifier l'utilisateur"
-    );
+    expect(page.element().querySelector('h1')?.textContent?.trim()).toBe("Modifier l'utilisateur");
     expect(page.input('Prénom').value).toBe('Juste');
     expect(page.input('Ville').value).toBe('Paris');
     expect(page.input('Quota mensuel de dépenses').value).toBe('10');
@@ -234,7 +220,7 @@ describe('UserFormPage', () => {
         address: { street: '12 rue de Rivoli', postalCode: '75001', city: 'Lyon' },
         monthlyExpenseQuota: 10,
       },
-      3
+      3,
     );
     expect(TestBed.inject(Router).url).toBe('/users');
   });
@@ -257,21 +243,18 @@ describe('UserFormPage', () => {
     expect(page.element().querySelector('form')).toBeNull();
   });
 
-  it.each([409, 412])(
-    'says so when the user was changed meanwhile (%i)',
-    async (status) => {
-      const api = fakeApi();
-      api.update.mockImplementation(() => httpError(status));
-      const page = await render(api, '/users/1/edit');
+  it.each([409, 412])('says so when the user was changed meanwhile (%i)', async (status) => {
+    const api = fakeApi();
+    api.update.mockImplementation(() => httpError(status));
+    const page = await render(api, '/users/1/edit');
 
-      await page.submit();
+    await page.submit();
 
-      expect(page.alert()).toBe(
-        "L'utilisateur a été modifié entre-temps. Rechargez la page pour repartir de ses dernières informations."
-      );
-      expect(TestBed.inject(Router).url).toBe('/users/1/edit');
-    }
-  );
+    expect(page.alert()).toBe(
+      "L'utilisateur a été modifié entre-temps. Rechargez la page pour repartir de ses dernières informations.",
+    );
+    expect(TestBed.inject(Router).url).toBe('/users/1/edit');
+  });
 
   it('says so when the user was deleted while being edited', async () => {
     const api = fakeApi();

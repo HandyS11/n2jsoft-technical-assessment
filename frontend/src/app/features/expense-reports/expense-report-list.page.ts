@@ -1,5 +1,4 @@
 import { CurrencyPipe } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -7,7 +6,7 @@ import { Router, RouterLink } from '@angular/router';
 import { catchError, EMPTY, Subject, switchMap } from 'rxjs';
 import { pagedList } from '../../core/paged-list';
 import { PaginationComponent } from '../../core/pagination.component';
-import { businessRuleCode } from '../../core/problem-details';
+import { businessRuleCode, hasStatus } from '../../core/problem-details';
 import { UserSummary } from '../users/user-summary';
 import { UsersApi } from '../users/users.api';
 import { confirmDeletion } from './confirm-deletion';
@@ -23,10 +22,7 @@ const pageSize = 20;
 const monthPattern = /^(20\d{2}|2100)-(0[1-9]|1[0-2])$/;
 
 const ruleMessages = new Map<string, string>([
-  [
-    'expense_report.inactive_user',
-    'Cet utilisateur est inactif : il ne peut pas être affecté à une note de frais.',
-  ],
+  ['expense_report.inactive_user', 'Cet utilisateur est inactif : il ne peut pas être affecté à une note de frais.'],
   ['expense_report.already_exists', 'Une note de frais existe déjà pour cet utilisateur et ce mois.'],
 ]);
 
@@ -36,16 +32,12 @@ function currentMonth(): string {
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function isNotFound(error: unknown): boolean {
-  return error instanceof HttpErrorResponse && error.status === 404;
-}
-
 function createErrorMessage(error: unknown): string {
   const ruleMessage = ruleMessages.get(businessRuleCode(error) ?? '');
   if (ruleMessage !== undefined) {
     return ruleMessage;
   }
-  if (isNotFound(error)) {
+  if (hasStatus(error, 404)) {
     // The user was deleted since the active users were loaded.
     return 'Utilisateur introuvable.';
   }
@@ -54,7 +46,7 @@ function createErrorMessage(error: unknown): string {
 
 /** The chosen user can no longer get a report (deleted or deactivated since the active users were loaded). */
 function isUnavailableUser(error: unknown): boolean {
-  return isNotFound(error) || businessRuleCode(error) === 'expense_report.inactive_user';
+  return hasStatus(error, 404) || businessRuleCode(error) === 'expense_report.inactive_user';
 }
 
 @Component({
@@ -132,12 +124,7 @@ function isUnavailableUser(error: unknown): boolean {
                   <td class="text-right tabular-nums">{{ report.expenseCount }}</td>
                   <td class="text-right whitespace-nowrap tabular-nums">{{ report.total | currency: 'EUR' }}</td>
                   <td class="text-right">
-                    <button
-                      type="button"
-                      class="btn-sm btn-danger"
-                      [disabled]="list.busy()"
-                      (click)="remove(report)"
-                    >
+                    <button type="button" class="btn-sm btn-danger" [disabled]="list.busy()" (click)="remove(report)">
                       Supprimer
                     </button>
                   </td>
@@ -182,10 +169,10 @@ export default class ExpenseReportListPage {
             catchError(() => {
               this.usersFailed.set(true);
               return EMPTY;
-            })
-          )
+            }),
+          ),
         ),
-        takeUntilDestroyed()
+        takeUntilDestroyed(),
       )
       .subscribe((users) => this.showUsers(users));
     this.userLoads.next();
@@ -209,20 +196,18 @@ export default class ExpenseReportListPage {
     const { userId, month } = this.form.getRawValue();
     this.creating.set(true);
     this.createError.set(null);
-    this.reportsApi
-      .create({ userId, year: Number(month.slice(0, 4)), month: Number(month.slice(5, 7)) })
-      .subscribe({
-        next: (report) => {
-          void this.router.navigate(['/expense-reports', report.id]);
-        },
-        error: (error: unknown) => {
-          this.creating.set(false);
-          this.createError.set(createErrorMessage(error));
-          if (isUnavailableUser(error)) {
-            this.userLoads.next();
-          }
-        },
-      });
+    this.reportsApi.create({ userId, year: Number(month.slice(0, 4)), month: Number(month.slice(5, 7)) }).subscribe({
+      next: (report) => {
+        void this.router.navigate(['/expense-reports', report.id]);
+      },
+      error: (error: unknown) => {
+        this.creating.set(false);
+        this.createError.set(createErrorMessage(error));
+        if (isUnavailableUser(error)) {
+          this.userLoads.next();
+        }
+      },
+    });
   }
 
   protected remove(report: ExpenseReportSummary): void {

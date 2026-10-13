@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import {
   AbstractControl,
@@ -10,7 +9,7 @@ import {
 } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { cityMaxLength, postalCodePattern, streetMaxLength } from '../../core/address-rules';
-import { businessRuleCode } from '../../core/problem-details';
+import { businessRuleCode, hasStatus } from '../../core/problem-details';
 import { maxTrimmedLength, requiredText } from '../../core/text-validators';
 import { ExpenseDetails, SaveExpense } from './expense';
 import { ExpensesApi } from './expenses.api';
@@ -32,18 +31,11 @@ const ruleMessages = new Map<string, string>([
     "Le quota mensuel de dépenses de cet utilisateur est atteint : impossible d'ajouter cette dépense.",
   ],
   ['expense.date_outside_report_month', 'La date doit être comprise dans le mois de la note de frais.'],
-  [
-    'expense_report.deleted_user',
-    "L'utilisateur de cette note de frais a été supprimé : elle est en lecture seule.",
-  ],
+  ['expense_report.deleted_user', "L'utilisateur de cette note de frais a été supprimé : elle est en lecture seule."],
 ]);
 
 function twoDecimals(control: AbstractControl<number | null>): ValidationErrors | null {
   return control.value === null || amountPattern.test(String(control.value)) ? null : { decimals: true };
-}
-
-function hasStatus(error: unknown, ...statuses: number[]): boolean {
-  return error instanceof HttpErrorResponse && statuses.includes(error.status);
 }
 
 type Field = 'date' | 'description' | 'amount' | 'storeName' | 'street' | 'postalCode' | 'city';

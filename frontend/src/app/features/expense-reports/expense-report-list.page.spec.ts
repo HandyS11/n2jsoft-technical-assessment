@@ -50,38 +50,30 @@ const monthMessage = 'Indiquez un mois au format AAAA-MM, entre 2000-01 et 2100-
 const inactiveUserMessage = 'Cet utilisateur est inactif : il ne peut pas être affecté à une note de frais.';
 
 function createFails(status: number, code?: string): Observable<never> {
-  return throwError(
-    () => new HttpErrorResponse({ status, error: code === undefined ? null : { status, code } })
-  );
+  return throwError(() => new HttpErrorResponse({ status, error: code === undefined ? null : { status, code } }));
 }
 
-function pageOf(
-  items: ExpenseReportSummary[],
-  page = 1,
-  totalCount = items.length
-): PagedResult<ExpenseReportSummary> {
+function pageOf(items: ExpenseReportSummary[], page = 1, totalCount = items.length): PagedResult<ExpenseReportSummary> {
   return { items, page, pageSize: 20, totalCount };
 }
 
 function fakeReportsApi(
-  list: (page: number) => Observable<PagedResult<ExpenseReportSummary>> = () =>
-    of(pageOf([october, september]))
+  list: (page: number) => Observable<PagedResult<ExpenseReportSummary>> = () => of(pageOf([october, september])),
 ) {
   return {
     list: vi.fn(list),
-    create: vi.fn(
-      (): Observable<ExpenseReportDetails> =>
-        of({
-          id: '9',
-          title: 'Juste Leblanc - Octobre 2025',
-          userId: 'u1',
-          year: 2025,
-          month: 10,
-          expenseCount: 0,
-          total: 0,
-          monthlyExpenseQuota: 5,
-          isReadOnly: false,
-        })
+    create: vi.fn((): Observable<ExpenseReportDetails> =>
+      of({
+        id: '9',
+        title: 'Juste Leblanc - Octobre 2025',
+        userId: 'u1',
+        year: 2025,
+        month: 10,
+        expenseCount: 0,
+        total: 0,
+        monthlyExpenseQuota: 5,
+        isReadOnly: false,
+      }),
     ),
     delete: vi.fn((): Observable<void> => of(undefined)),
   };
@@ -108,10 +100,9 @@ async function render(reportsApi = fakeReportsApi(), usersApi = fakeUsersApi()) 
   harness.detectChanges();
   const element = () => harness.routeNativeElement as HTMLElement;
   const button = (label: string, rowIndex?: number) => {
-    const scope =
-      rowIndex === undefined ? element() : element().querySelectorAll('tbody tr')[rowIndex];
+    const scope = rowIndex === undefined ? element() : element().querySelectorAll('tbody tr')[rowIndex];
     const found = Array.from(scope.querySelectorAll('button')).find(
-      (candidate) => candidate.textContent?.trim() === label
+      (candidate) => candidate.textContent?.trim() === label,
     );
     if (!found) {
       throw new Error(`No button "${label}"`);
@@ -125,25 +116,13 @@ async function render(reportsApi = fakeReportsApi(), usersApi = fakeUsersApi()) 
     detectChanges: () => harness.detectChanges(),
     text: () => element().textContent ?? '',
     rows: () =>
-      Array.from(element().querySelectorAll('tbody tr')).map((row) =>
-        row.querySelector('td')?.textContent?.trim()
-      ),
+      Array.from(element().querySelectorAll('tbody tr')).map((row) => row.querySelector('td')?.textContent?.trim()),
     linkOf: (rowIndex: number) =>
       element().querySelectorAll('tbody tr')[rowIndex].querySelector('a')?.getAttribute('href'),
-    alerts: () =>
-      Array.from(element().querySelectorAll('[role="alert"]')).map((alert) =>
-        alert.textContent?.trim()
-      ),
-    errors: () =>
-      Array.from(element().querySelectorAll('.field-error')).map((error) =>
-        error.textContent?.trim()
-      ),
-    options: () =>
-      Array.from(element().querySelectorAll('#userId option')).map((option) =>
-        option.textContent?.trim()
-      ),
-    chosenUser: () =>
-      (element().querySelector('#userId') as HTMLSelectElement).selectedOptions[0]?.textContent?.trim(),
+    alerts: () => Array.from(element().querySelectorAll('[role="alert"]')).map((alert) => alert.textContent?.trim()),
+    errors: () => Array.from(element().querySelectorAll('.field-error')).map((error) => error.textContent?.trim()),
+    options: () => Array.from(element().querySelectorAll('#userId option')).map((option) => option.textContent?.trim()),
+    chosenUser: () => (element().querySelector('#userId') as HTMLSelectElement).selectedOptions[0]?.textContent?.trim(),
     month: () => element().querySelector('#month') as HTMLInputElement,
     click: (label: string, rowIndex?: number) => {
       button(label, rowIndex).click();
@@ -187,7 +166,7 @@ describe('ExpenseReportListPage', () => {
       const page = await render();
 
       const cells = Array.from(page.element().querySelectorAll('tbody tr')[0].querySelectorAll('td')).map((cell) =>
-        (cell.textContent ?? '').replace(/\s+/g, ' ').trim()
+        (cell.textContent ?? '').replace(/\s+/g, ' ').trim(),
       );
       expect(cells.slice(0, 3)).toEqual(['Juste Leblanc - Octobre 2025', '3', '1 234,50 €']);
     });
@@ -208,16 +187,14 @@ describe('ExpenseReportListPage', () => {
     });
 
     it('says so when the reports cannot be loaded', async () => {
-      const page = await render(
-        fakeReportsApi(() => throwError(() => new Error('Service unavailable')))
-      );
+      const page = await render(fakeReportsApi(() => throwError(() => new Error('Service unavailable'))));
 
       expect(page.alerts()).toContain('Impossible de charger les notes de frais.');
     });
 
     it('pages through the reports', async () => {
       const reportsApi = fakeReportsApi((pageNumber) =>
-        of(pageOf(pageNumber === 1 ? [october] : [september], pageNumber, 45))
+        of(pageOf(pageNumber === 1 ? [october] : [september], pageNumber, 45)),
       );
       const page = await render(reportsApi);
       expect(page.text()).toContain('Page 1 sur 3');
@@ -237,7 +214,7 @@ describe('ExpenseReportListPage', () => {
       page.click('Supprimer', 0);
 
       expect(confirm).toHaveBeenCalledWith(
-        'Supprimer la note de frais « Juste Leblanc - Octobre 2025 » ? Ses dépenses seront supprimées avec elle.'
+        'Supprimer la note de frais « Juste Leblanc - Octobre 2025 » ? Ses dépenses seront supprimées avec elle.',
       );
       expect(reportsApi.delete).toHaveBeenCalledWith('1');
       expect(reportsApi.list).toHaveBeenCalledTimes(2);
@@ -278,9 +255,7 @@ describe('ExpenseReportListPage', () => {
     it('says so when a deletion fails, and reloads the page', async () => {
       vi.spyOn(window, 'confirm').mockReturnValue(true);
       const reportsApi = fakeReportsApi();
-      reportsApi.delete.mockImplementation(() =>
-        throwError(() => new HttpErrorResponse({ status: 500 }))
-      );
+      reportsApi.delete.mockImplementation(() => throwError(() => new HttpErrorResponse({ status: 500 })));
       const page = await render(reportsApi);
 
       page.click('Supprimer', 0);
@@ -310,7 +285,10 @@ describe('ExpenseReportListPage', () => {
     });
 
     it('says so when there is no active user', async () => {
-      const page = await render(fakeReportsApi(), fakeUsersApi(() => of([])));
+      const page = await render(
+        fakeReportsApi(),
+        fakeUsersApi(() => of([])),
+      );
 
       expect(page.text()).toContain('Aucun utilisateur actif.');
       expect(page.element().querySelector('form')).toBeNull();
@@ -319,7 +297,7 @@ describe('ExpenseReportListPage', () => {
     it('says so when the users cannot be loaded', async () => {
       const page = await render(
         fakeReportsApi(),
-        fakeUsersApi(() => throwError(() => new Error('Service unavailable')))
+        fakeUsersApi(() => throwError(() => new Error('Service unavailable'))),
       );
 
       expect(page.alerts()).toContain('Impossible de charger les utilisateurs.');
@@ -375,9 +353,7 @@ describe('ExpenseReportListPage', () => {
       { status: 500, body: null, message: "L'opération a échoué. Veuillez réessayer." },
     ])('says "$message" when the API answers $status', async ({ status, body, message }) => {
       const reportsApi = fakeReportsApi();
-      reportsApi.create.mockImplementation(() =>
-        throwError(() => new HttpErrorResponse({ status, error: body }))
-      );
+      reportsApi.create.mockImplementation(() => throwError(() => new HttpErrorResponse({ status, error: body })));
       const page = await render(reportsApi);
       page.choose('u1');
 

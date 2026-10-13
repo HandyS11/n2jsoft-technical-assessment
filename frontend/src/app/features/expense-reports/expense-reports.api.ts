@@ -2,10 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { PagedResult } from '../../core/paged-result';
-import {
-  CreateExpenseReport,
-  ExpenseReportDetails,
-} from './expense-report-details';
+import { CreateExpenseReport, ExpenseReportDetails } from './expense-report-details';
 import { ExpenseReportSummary } from './expense-report-summary';
 
 const expenseReportsUrl = '/api/v1/expense-reports';
@@ -14,10 +11,7 @@ const expenseReportsUrl = '/api/v1/expense-reports';
 export class ExpenseReportsApi {
   private readonly http = inject(HttpClient);
 
-  list(
-    page: number,
-    pageSize: number,
-  ): Observable<PagedResult<ExpenseReportSummary>> {
+  list(page: number, pageSize: number): Observable<PagedResult<ExpenseReportSummary>> {
     return this.http.get<PagedResult<ExpenseReportSummary>>(expenseReportsUrl, {
       params: { page, pageSize },
     });

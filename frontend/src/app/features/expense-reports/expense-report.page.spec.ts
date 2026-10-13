@@ -56,9 +56,9 @@ function fakeApi() {
 function fakeExpensesApi() {
   return {
     list: vi.fn((_reportId: string, page: number): Observable<PagedResult<ExpenseSummary>> =>
-      of(expensePage([taxi], page))
+      of(expensePage([taxi], page)),
     ),
-    get: vi.fn((): Observable<ExpenseDetails> => of(taxiDetails)),
+    get: vi.fn<(reportId: string, id: string) => Observable<ExpenseDetails>>(() => of(taxiDetails)),
     create: vi.fn((): Observable<ExpenseDetails> => of(taxiDetails)),
     update: vi.fn((): Observable<void> => of(undefined)),
     delete: vi.fn((): Observable<void> => of(undefined)),
@@ -87,9 +87,8 @@ async function render(api = fakeApi(), expensesApi = fakeExpensesApi()) {
   harness.detectChanges();
   const element = () => harness.routeNativeElement as HTMLElement;
   const button = (name: string, scope: ParentNode = element()) =>
-    Array.from(scope.querySelectorAll('button')).find(
-      (candidate) => candidate.textContent?.trim() === name
-    ) as HTMLButtonElement | undefined;
+    Array.from(scope.querySelectorAll('button')).find((candidate) => candidate.textContent?.trim() === name) as
+      HTMLButtonElement | undefined;
   const rows = () => Array.from(element().querySelectorAll('tbody tr'));
   const click = async (target: HTMLButtonElement | undefined) => {
     target?.click();
@@ -160,7 +159,7 @@ describe('ExpenseReportPage', () => {
       const page = await render();
 
       const link = Array.from(page.element().querySelectorAll('a')).find(
-        (candidate) => candidate.textContent?.trim() === "Voir l'utilisateur"
+        (candidate) => candidate.textContent?.trim() === "Voir l'utilisateur",
       );
       expect(link?.getAttribute('href')).toBe('/users/u1/edit');
     });
@@ -233,7 +232,7 @@ describe('ExpenseReportPage', () => {
       await page.remove();
 
       expect(confirm).toHaveBeenCalledWith(
-        'Supprimer la note de frais « Juste Leblanc - Octobre 2025 » ? Ses dépenses seront supprimées avec elle.'
+        'Supprimer la note de frais « Juste Leblanc - Octobre 2025 » ? Ses dépenses seront supprimées avec elle.',
       );
       expect(api.delete).toHaveBeenCalledWith('1');
       expect(TestBed.inject(Router).url).toBe('/expense-reports');
@@ -434,7 +433,7 @@ describe('ExpenseReportPage', () => {
       const api = fakeApi();
       const expensesApi = fakeExpensesApi();
       expensesApi.create.mockImplementation(() =>
-        throwError(() => new HttpErrorResponse({ status: 422, error: { code: 'expense_report.deleted_user' } }))
+        throwError(() => new HttpErrorResponse({ status: 422, error: { code: 'expense_report.deleted_user' } })),
       );
       const page = await render(api, expensesApi);
       api.get.mockImplementation(() => of({ ...october, isReadOnly: true }));
@@ -458,7 +457,7 @@ describe('ExpenseReportPage', () => {
       expect(api.get).toHaveBeenCalledTimes(2);
       expect(page.form()).toBeNull();
       expect(page.element().textContent).toContain(
-        "L'utilisateur de cette note de frais a été supprimé : elle est en lecture seule."
+        "L'utilisateur de cette note de frais a été supprimé : elle est en lecture seule.",
       );
     });
 
@@ -487,14 +486,14 @@ describe('ExpenseReportPage', () => {
       await submitValidExpense();
       expect(page.status()).toBe('Dépense ajoutée.');
       expensesApi.create.mockImplementation(() =>
-        throwError(() => new HttpErrorResponse({ status: 422, error: { code: 'expense.quota_exceeded' } }))
+        throwError(() => new HttpErrorResponse({ status: 422, error: { code: 'expense.quota_exceeded' } })),
       );
 
       await submitValidExpense();
 
       expect(page.status()).toBeUndefined();
       expect(page.alert()).toBe(
-        "Le quota mensuel de dépenses de cet utilisateur est atteint : impossible d'ajouter cette dépense."
+        "Le quota mensuel de dépenses de cet utilisateur est atteint : impossible d'ajouter cette dépense.",
       );
     });
 
@@ -505,7 +504,7 @@ describe('ExpenseReportPage', () => {
       const page = await render(api);
 
       expect(page.element().textContent).toContain(
-        "L'utilisateur de cette note de frais a été supprimé : elle est en lecture seule."
+        "L'utilisateur de cette note de frais a été supprimé : elle est en lecture seule.",
       );
       expect(page.form()).toBeNull();
       expect(page.button('Modifier')).toBeUndefined();

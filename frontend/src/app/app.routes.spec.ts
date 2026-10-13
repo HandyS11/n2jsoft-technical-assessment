@@ -31,8 +31,7 @@ describe('appRoutes', () => {
           provide: ExpenseReportsApi,
           useValue: {
             list: () => of({ items: [], page: 1, pageSize: 20, totalCount: 0 }),
-            get: () =>
-              of({ id: '1', title: 'Juste Leblanc - Octobre 2025', userId: 'u1', year: 2025, month: 10 }),
+            get: () => of({ id: '1', title: 'Juste Leblanc - Octobre 2025', userId: 'u1', year: 2025, month: 10 }),
           },
         },
       ],
@@ -45,9 +44,7 @@ describe('appRoutes', () => {
     await harness.navigateByUrl('/');
 
     expect(TestBed.inject(Router).url).toBe('/expense-reports');
-    expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(
-      'Notes de frais'
-    );
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe('Notes de frais');
   });
 
   it('redirects an unknown URL to the expense reports page', async () => {
@@ -68,8 +65,6 @@ describe('appRoutes', () => {
 
     await harness.navigateByUrl(url);
 
-    expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(
-      heading
-    );
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(heading);
   });
 });

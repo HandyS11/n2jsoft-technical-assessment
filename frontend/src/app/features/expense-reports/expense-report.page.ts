@@ -1,11 +1,11 @@
 import { CurrencyPipe, formatDate } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, LOCALE_ID, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, EMPTY, finalize, Observable, of, Subject, switchMap } from 'rxjs';
 import { pagedList } from '../../core/paged-list';
 import { PaginationComponent } from '../../core/pagination.component';
+import { hasStatus } from '../../core/problem-details';
 import { ExpenseDetails, ExpenseSummary, formatBillingAddress } from '../expenses/expense';
 import { ExpenseFormComponent } from '../expenses/expense-form.component';
 import { ExpensesApi } from '../expenses/expenses.api';
@@ -15,10 +15,6 @@ import { ExpenseReportsApi } from './expense-reports.api';
 
 /** "Par lot de 5": the README's batch size. */
 const expensesPerPage = 5;
-
-function isNotFound(error: unknown): boolean {
-  return error instanceof HttpErrorResponse && error.status === 404;
-}
 
 /** "1 dépense", "3 dépenses"; French keeps 0 singular. */
 function expenseCount(count: number): string {
@@ -190,7 +186,7 @@ export default class ExpenseReportPage {
       .pipe(
         // Only the latest read counts: an answer arriving late must not replace the report read since.
         switchMap(() => this.api.get(this.id).pipe(catchError((error: unknown) => this.reportLoadFailed(error)))),
-        takeUntilDestroyed()
+        takeUntilDestroyed(),
       )
       .subscribe((report) => {
         this.report.set(report);
@@ -204,9 +200,9 @@ export default class ExpenseReportPage {
             ? of(undefined)
             : this.expensesApi
                 .get(this.id, expenseId)
-                .pipe(catchError((error: unknown) => this.expenseLoadFailed(error)))
+                .pipe(catchError((error: unknown) => this.expenseLoadFailed(error))),
         ),
-        takeUntilDestroyed()
+        takeUntilDestroyed(),
       )
       .subscribe((expense) => this.editing.set(expense));
     this.loadReport();
@@ -266,7 +262,7 @@ export default class ExpenseReportPage {
       },
       error: (error: unknown) => {
         // Deleted meanwhile (another tab): it is gone, as asked.
-        if (isNotFound(error)) {
+        if (hasStatus(error, 404)) {
           void this.router.navigateByUrl('/expense-reports');
           return;
         }
@@ -282,12 +278,14 @@ export default class ExpenseReportPage {
   }
 
   private reportLoadFailed(error: unknown): Observable<never> {
-    this.loadError.set(isNotFound(error) ? 'Note de frais introuvable.' : 'Impossible de charger la note de frais.');
+    this.loadError.set(
+      hasStatus(error, 404) ? 'Note de frais introuvable.' : 'Impossible de charger la note de frais.',
+    );
     return EMPTY;
   }
 
   private expenseLoadFailed(error: unknown): Observable<never> {
-    if (isNotFound(error)) {
+    if (hasStatus(error, 404)) {
       // Deleted meanwhile: the list shows what is left.
       this.notice.set('Dépense introuvable.');
       this.reloadExpenses();

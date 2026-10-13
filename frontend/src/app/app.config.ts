@@ -1,9 +1,5 @@
 import { registerLocaleData } from '@angular/common';
-import {
-  provideHttpClient,
-  withInterceptorsFromDi,
-  withXhr,
-} from '@angular/common/http';
+import { provideHttpClient } from '@angular/common/http';
 import localeFr from '@angular/common/locales/fr';
 import {
   ApplicationConfig,
@@ -21,7 +17,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(appRoutes),
-    provideHttpClient(withXhr(), withInterceptorsFromDi()),
+    provideHttpClient(),
     { provide: LOCALE_ID, useValue: 'fr-FR' },
   ],
 };

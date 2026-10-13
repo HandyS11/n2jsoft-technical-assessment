@@ -1,14 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { PagedResult } from '../../core/paged-result';
-import {
-  CreateExpenseReport,
-  ExpenseReportDetails,
-} from './expense-report-details';
+import { CreateExpenseReport, ExpenseReportDetails } from './expense-report-details';
 import { ExpenseReportSummary } from './expense-report-summary';
 import { ExpenseReportsApi } from './expense-reports.api';
 
@@ -42,7 +36,14 @@ describe('ExpenseReportsApi', () => {
   it('lists a page of reports with GET /api/v1/expense-reports', () => {
     const reports: PagedResult<ExpenseReportSummary> = {
       items: [
-        { id, title: 'Juste Leblanc - Octobre 2025', year: 2025, month: 10 },
+        {
+          id,
+          title: 'Juste Leblanc - Octobre 2025',
+          year: 2025,
+          month: 10,
+          expenseCount: 3,
+          total: 1234.5,
+        },
       ],
       page: 2,
       pageSize: 20,
@@ -52,9 +53,7 @@ describe('ExpenseReportsApi', () => {
 
     api.list(2, 20).subscribe((value) => (result = value));
 
-    const request = http.expectOne(
-      '/api/v1/expense-reports?page=2&pageSize=20',
-    );
+    const request = http.expectOne('/api/v1/expense-reports?page=2&pageSize=20');
     expect(request.request.method).toBe('GET');
     request.flush(reports);
     expect(result).toEqual(reports);

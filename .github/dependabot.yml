@@ -42,11 +42,8 @@ updates:
         patterns:
           - "*"
 
-  # .NET SDK pin (global.json). Prereleases are skipped via `allowPrerelease: false`.
-  - package-ecosystem: "dotnet-sdk"
-    directory: "/"
-    schedule:
-      interval: "weekly"
+  # No "dotnet-sdk" ecosystem: global.json's version is a floor, not a pin. With `rollForward: latestMinor`, 10.0.100
+  # accepts any installed .NET 10 SDK; Dependabot would raise it to the latest one and lock out older .NET 10 SDKs.
 
   # npm (Angular frontend)
   - package-ecosystem: "npm"

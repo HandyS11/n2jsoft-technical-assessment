@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Tailwind's reset strips every control of its look: these give them back one, shared by every page. */
 @layer base {
@@ -46,11 +46,11 @@
     @apply bg-slate-50/60;
   }
 
-  [role="alert"] {
+  [role='alert'] {
     @apply rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800;
   }
 
-  [role="status"] {
+  [role='status'] {
     @apply rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800;
   }
 }

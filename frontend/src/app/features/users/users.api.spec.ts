@@ -1,8 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { CursorPage } from '../../core/cursor-page';
 import { PagedResult } from '../../core/paged-result';
@@ -140,12 +137,8 @@ describe('UsersApi', () => {
 
     api.listAllActive().subscribe((value) => (result = value));
 
-    http
-      .expectOne('/api/v1/users/active?pageSize=100')
-      .flush(activeSlice([justeSummary], 'after-juste'));
-    http
-      .expectOne('/api/v1/users/active?pageSize=100&after=after-juste')
-      .flush(activeSlice([marcSummary], null));
+    http.expectOne('/api/v1/users/active?pageSize=100').flush(activeSlice([justeSummary], 'after-juste'));
+    http.expectOne('/api/v1/users/active?pageSize=100&after=after-juste').flush(activeSlice([marcSummary], null));
     expect(result).toEqual([justeSummary, marcSummary]);
   });
 

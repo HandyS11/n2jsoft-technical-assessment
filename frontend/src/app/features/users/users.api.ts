@@ -16,7 +16,8 @@ export class UsersApi {
 
   /** Every user when `isActive` is undefined, otherwise only the active or the inactive ones. */
   list(page: number, pageSize: number, isActive?: boolean): Observable<PagedResult<UserSummary>> {
-    const params = isActive === undefined ? { page, pageSize } : { page, pageSize, isActive };
+    const params: Record<string, number | boolean> =
+      isActive === undefined ? { page, pageSize } : { page, pageSize, isActive };
     return this.http.get<PagedResult<UserSummary>>(usersUrl, { params });
   }
 
@@ -26,7 +27,7 @@ export class UsersApi {
       // Each slice starts after the last user read: users changing meanwhile cannot make it skip or repeat others.
       expand((slice) => (slice.next === null ? EMPTY : this.listActive(slice.next))),
       mergeMap((slice) => slice.items),
-      toArray()
+      toArray(),
     );
   }
 
@@ -58,7 +59,8 @@ export class UsersApi {
   }
 
   private listActive(after?: string): Observable<CursorPage<UserSummary>> {
-    const params = after === undefined ? { pageSize: largestPageSize } : { pageSize: largestPageSize, after };
+    const params: Record<string, number | string> =
+      after === undefined ? { pageSize: largestPageSize } : { pageSize: largestPageSize, after };
     return this.http.get<CursorPage<UserSummary>>(`${usersUrl}/active`, { params });
   }
 }

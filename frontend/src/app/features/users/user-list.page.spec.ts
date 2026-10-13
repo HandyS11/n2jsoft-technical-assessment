@@ -21,22 +21,16 @@ const marc: UserSummary = {
   isActive: false,
 };
 
-function pageOf(
-  items: UserSummary[],
-  page = 1,
-  totalCount = items.length
-): PagedResult<UserSummary> {
+function pageOf(items: UserSummary[], page = 1, totalCount = items.length): PagedResult<UserSummary> {
   return { items, page, pageSize: 20, totalCount };
 }
 
-function fakeApi(
-  list: (page: number) => Observable<PagedResult<UserSummary>>
-) {
+function fakeApi(list: (page: number) => Observable<PagedResult<UserSummary>>) {
   return {
     list: vi.fn(list),
-    activate: vi.fn(() => of(undefined)),
-    deactivate: vi.fn(() => of(undefined)),
-    delete: vi.fn(() => of(undefined)),
+    activate: vi.fn((): Observable<void> => of(undefined)),
+    deactivate: vi.fn((): Observable<void> => of(undefined)),
+    delete: vi.fn((): Observable<void> => of(undefined)),
   };
 }
 
@@ -49,12 +43,9 @@ function render(api: ReturnType<typeof fakeApi>) {
   fixture.detectChanges();
   const element = fixture.nativeElement as HTMLElement;
   const button = (label: string, rowIndex?: number) => {
-    const scope =
-      rowIndex === undefined
-        ? element
-        : element.querySelectorAll('tbody tr')[rowIndex];
+    const scope = rowIndex === undefined ? element : element.querySelectorAll('tbody tr')[rowIndex];
     const found = Array.from(scope.querySelectorAll('button')).find(
-      (candidate) => candidate.textContent?.trim() === label
+      (candidate) => candidate.textContent?.trim() === label,
     );
     if (!found) {
       throw new Error(`No button "${label}"`);
@@ -70,7 +61,7 @@ function render(api: ReturnType<typeof fakeApi>) {
       Array.from(element.querySelectorAll('tbody tr')).map((row) =>
         Array.from(row.querySelectorAll('td'))
           .slice(0, 4)
-          .map((cell) => cell.textContent?.trim())
+          .map((cell) => cell.textContent?.trim()),
       ),
     click: (label: string, rowIndex?: number) => {
       button(label, rowIndex).click();
@@ -148,28 +139,22 @@ describe('UserListPage', () => {
   });
 
   it('shows a loading message until the API answers', () => {
-    const page = render(
-      fakeApi(() => new Observable<PagedResult<UserSummary>>())
-    );
+    const page = render(fakeApi(() => new Observable<PagedResult<UserSummary>>()));
 
     expect(page.element.textContent).toContain('Chargement…');
   });
 
   it('says so when the API fails', () => {
-    const page = render(
-      fakeApi(() => throwError(() => new Error('Service unavailable')))
-    );
+    const page = render(fakeApi(() => throwError(() => new Error('Service unavailable'))));
 
-    expect(
-      page.element.querySelector('[role="alert"]')?.textContent?.trim()
-    ).toBe('Impossible de charger les utilisateurs.');
+    expect(page.element.querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+      'Impossible de charger les utilisateurs.',
+    );
     expect(page.element.textContent).not.toContain('Chargement…');
   });
 
   it('pages through the users', () => {
-    const api = fakeApi((page) =>
-      of(pageOf(page === 1 ? [juste] : [marc], page, 45))
-    );
+    const api = fakeApi((page) => of(pageOf(page === 1 ? [juste] : [marc], page, 45)));
     const page = render(api);
     expect(page.element.textContent).toContain('Page 1 sur 3');
 
@@ -184,7 +169,7 @@ describe('UserListPage', () => {
     const page = render(fakeApi(() => of(pageOf([juste], 1, 45))));
 
     const previous = Array.from(page.element.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Précédent'
+      (button) => button.textContent?.trim() === 'Précédent',
     );
     expect(previous?.disabled).toBe(true);
   });
@@ -216,9 +201,7 @@ describe('UserListPage', () => {
 
     page.click('Supprimer', 0);
 
-    expect(confirm).toHaveBeenCalledWith(
-      "Supprimer l'utilisateur Juste Leblanc ?"
-    );
+    expect(confirm).toHaveBeenCalledWith("Supprimer l'utilisateur Juste Leblanc ?");
     expect(api.delete).toHaveBeenCalledWith('1');
     expect(api.list).toHaveBeenCalledTimes(2);
   });
@@ -275,17 +258,13 @@ describe('UserListPage', () => {
 
     page.click('Supprimer', 0);
 
-    expect(api.list.mock.calls.map(([pageNumber]) => pageNumber)).toEqual([
-      1, 2, 3, 4, 5, 5, 1,
-    ]);
+    expect(api.list.mock.calls.map(([pageNumber]) => pageNumber)).toEqual([1, 2, 3, 4, 5, 5, 1]);
     expect(page.element.textContent).toContain('Page 1 sur 1');
   });
 
   it('ignores an answer arriving after a later request', () => {
     const pageTwo = new Subject<PagedResult<UserSummary>>();
-    const api = fakeApi((page) =>
-      page === 1 ? of(pageOf([juste], 1, 45)) : pageTwo
-    );
+    const api = fakeApi((page) => (page === 1 ? of(pageOf([juste], 1, 45)) : pageTwo));
     const page = render(api);
     page.click('Suivant');
     // Page 2 is still loading when the action reloads page 1, which answers at once.
@@ -320,31 +299,27 @@ describe('UserListPage', () => {
 
   it('says so when an action fails', () => {
     const api = fakeApi(() => of(pageOf([juste])));
-    api.deactivate.mockImplementation(() =>
-      throwError(() => new Error('Service unavailable'))
-    );
+    api.deactivate.mockImplementation(() => throwError(() => new Error('Service unavailable')));
     const page = render(api);
 
     page.click('Désactiver', 0);
 
-    expect(
-      page.element.querySelector('[role="alert"]')?.textContent?.trim()
-    ).toBe("L'opération a échoué. Veuillez réessayer.");
+    expect(page.element.querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+      "L'opération a échoué. Veuillez réessayer.",
+    );
   });
 
   it('reloads the current page when an action fails, keeping the alert', () => {
     const api = fakeApi(() => of(pageOf([juste])));
-    api.deactivate.mockImplementation(() =>
-      throwError(() => new Error('Not found'))
-    );
+    api.deactivate.mockImplementation(() => throwError(() => new Error('Not found')));
     const page = render(api);
 
     page.click('Désactiver', 0);
 
     expect(api.list).toHaveBeenCalledTimes(2);
     expect(api.list).toHaveBeenLastCalledWith(1, 20, undefined);
-    expect(
-      page.element.querySelector('[role="alert"]')?.textContent?.trim()
-    ).toBe("L'opération a échoué. Veuillez réessayer.");
+    expect(page.element.querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+      "L'opération a échoué. Veuillez réessayer.",
+    );
   });
 });

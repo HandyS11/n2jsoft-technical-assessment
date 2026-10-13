@@ -4,6 +4,7 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { cityMaxLength, postalCodePattern, streetMaxLength } from '../../core/address-rules';
+import { hasStatus } from '../../core/problem-details';
 import { maxTrimmedLength, requiredText } from '../../core/text-validators';
 import { SaveUser } from './user-details';
 import { UsersApi } from './users.api';
@@ -16,14 +17,7 @@ import { UsersApi } from './users.api';
 const nameMaxLength = 100;
 const minMonthlyExpenseQuota = 1;
 
-const fields = [
-  'firstName',
-  'lastName',
-  'street',
-  'postalCode',
-  'city',
-  'monthlyExpenseQuota',
-] as const;
+const fields = ['firstName', 'lastName', 'street', 'postalCode', 'city', 'monthlyExpenseQuota'] as const;
 type Field = (typeof fields)[number];
 
 /**
@@ -44,18 +38,14 @@ function rejectedFields(error: unknown): Field[] {
   });
 }
 
-function isNotFound(error: unknown): boolean {
-  return error instanceof HttpErrorResponse && error.status === 404;
-}
-
 function saveErrorMessage(error: unknown): string {
-  if (isNotFound(error)) {
+  if (hasStatus(error, 404)) {
     return 'Utilisateur introuvable.';
   }
-  if (error instanceof HttpErrorResponse && error.status === 400) {
+  if (hasStatus(error, 400)) {
     return 'Les informations saisies sont invalides.';
   }
-  if (error instanceof HttpErrorResponse && (error.status === 409 || error.status === 412)) {
+  if (hasStatus(error, 409, 412)) {
     return "L'utilisateur a été modifié entre-temps. Rechargez la page pour repartir de ses dernières informations.";
   }
   return "L'enregistrement a échoué. Veuillez réessayer.";
@@ -177,9 +167,7 @@ export default class UserFormPage {
           this.loaded.set(true);
         },
         error: (error: unknown) =>
-          this.error.set(
-            isNotFound(error) ? 'Utilisateur introuvable.' : "Impossible de charger l'utilisateur."
-          ),
+          this.error.set(hasStatus(error, 404) ? 'Utilisateur introuvable.' : "Impossible de charger l'utilisateur."),
       });
     }
   }

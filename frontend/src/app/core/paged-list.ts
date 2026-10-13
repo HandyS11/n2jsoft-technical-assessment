@@ -52,10 +52,10 @@ export function pagedList<T>(fetch: (page: number) => Observable<PagedResult<T>>
             failed.set(true);
             busy.set(false);
             return EMPTY;
-          })
-        )
+          }),
+        ),
       ),
-      takeUntilDestroyed()
+      takeUntilDestroyed(),
     )
     .subscribe(show);
   load(1);

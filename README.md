@@ -11,8 +11,8 @@ Le TP utilise .NET Aspire pour configurer une bdd PostgreSQL, une webapi ASP.NET
 
 Il vous faudra donc :
 - Docker Desktop (ou similaire)
-- .NET 10 SDK avec ASP.NET
-- nodeJS >= 22.12
+- .NET 10 SDK avec ASP.NET (10.0.100 ou plus récent)
+- Node.js 22.22.3 ou plus récent en 22.x, 24.15.0 ou plus récent en 24.x, ou 26 et plus (exigé par Angular 22)
 
 ### Lancement
 
@@ -31,6 +31,10 @@ La bdd est conservée d'un lancement à l'autre dans un volume Docker (`n2jsoft.
 repartir des données de démonstration, supprimer ce volume (`docker volume ls`, puis `docker volume rm`).
 
 La console dotnet affiche le lien vers le dashboard Aspire pour consulter les services applicatifs.
+
+Sans certificat de développement HTTPS approuvé (le cas habituel sous Linux), le dashboard affiche « Lost connection
+to the AppHost » : lancer alors en http, comme indiqué dans « Certificat de développement » (tranche 5 de « Mes
+Notes »).
 
 ### Critères d'évaluation
 
@@ -109,6 +113,30 @@ détaillent ce qui a été réalisé et les hypothèses retenues là où le suje
 Le travail est découpé en tranches verticales décrites dans la [feuille de route](docs/superpowers/roadmap.md).
 Chaque tranche a sa spécification (`docs/superpowers/specs/`) et son plan d'implémentation
 (`docs/superpowers/plans/`).
+
+Chaque tranche a été développée sur sa propre branche, en petits commits, puis fusionnée dans `develop` par une pull
+request en un seul commit (*squash*). L'historique de `develop` compte donc un commit par tranche ; le détail se lit
+dans les pull requests : [#21](https://github.com/HandyS11/n2jsoft-technical-assessment/pull/21) (fondations,
+26 commits), [#22](https://github.com/HandyS11/n2jsoft-technical-assessment/pull/22) (utilisateurs, 28),
+[#23](https://github.com/HandyS11/n2jsoft-technical-assessment/pull/23) (notes de frais, 18),
+[#24](https://github.com/HandyS11/n2jsoft-technical-assessment/pull/24) (dépenses, 19) et
+[#25](https://github.com/HandyS11/n2jsoft-technical-assessment/pull/25) (finitions, 12).
+
+### Écarts par rapport au projet fourni
+
+Le projet fourni a été importé, puis réorganisé dès le premier commit (`chore: initial project setup`) :
+
+- **.NET 10 au lieu de .NET 9** : .NET 10 est la version LTS en cours, supportée jusqu'en novembre 2028, alors que le
+  support de .NET 9 s'arrête le 10 novembre 2026. Le `global.json` accepte tout SDK .NET 10 à partir de 10.0.100.
+- **Aspire 13** (13.6.1) : l'AppHost lance le front avec `AddJavaScriptApp`.
+- **AppHost déplacé** de `backend/src/AppHost` vers `tools/N2JSoft.Aspire` : il orchestre la base, l'API et le front
+  sans faire partie du backend. `backend/src` ne contient plus que les couches de l'application (`Domain`,
+  `Application`, `Infrastructure`, `WebApi`) et `backend/tests` leurs tests.
+- **Angular 22 et Nx 23** au lieu d'Angular 20 et Nx 21, avec `nx migrate`.
+- **Configuration commune à la racine** : solution `N2JSoft.slnx`, versions des paquets centralisées
+  (`Directory.Packages.props`), analyseurs de code dont les avertissements bloquent le build (`Directory.Build.props`),
+  CI GitHub Actions et Dependabot.
+- **Redis supprimé** (voir la tranche 1).
 
 ### Couverture du sujet
 
@@ -192,8 +220,8 @@ Hypothèses (le sujet ne précise pas) :
 
 - Le quota mensuel est un entier supérieur ou égal à 1, sans plafond. Il reste modifiable ; le baisser sous le
   nombre de dépenses déjà saisies dans le mois ne touche pas l'existant et ne bloque que les nouvelles dépenses.
-- Longueurs maximales : 100 caractères pour le nom et le prénom, 200 pour la rue, 100 pour la ville. Elles sont
-  comptées avant le retrait des espaces en début et en fin, qui est ensuite appliqué.
+- Longueurs maximales : 100 caractères pour le nom et le prénom, 200 pour la rue, 100 pour la ville. Les espaces en
+  début et en fin sont retirés avant de compter la longueur, et ne sont pas enregistrés.
 - Un utilisateur inactif reste visible et modifiable ; seul son rattachement à une nouvelle note de frais sera
   refusé (tranche 3).
 - Un utilisateur supprimé ne peut pas être restauré.
